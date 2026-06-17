@@ -10,7 +10,8 @@ export default async function InsumosPage() {
   `;
 
   // Agrupar por categoría para mejor navegación
-  const porCategoria: Record<string, typeof insumos> = {};
+  type InsumoRow = (typeof insumos)[number];
+  const porCategoria: Record<string, InsumoRow[]> = {};
   insumos.forEach(i => {
     const cat = i.nombre_categoria || 'Sin categoría';
     if (!porCategoria[cat]) porCategoria[cat] = [];
