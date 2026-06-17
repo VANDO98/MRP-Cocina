@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createInsumo } from '@/app/actions';
 
 type Categoria = { id_categoria_insumo: number; nombre_categoria: string };
-type Unidad = { id_unidad: number; nombre_unidad: string; simbolo: string };
+type Unidad = { id_unidad: number; simbolo: string };
 
 type Props = {
   categorias: Categoria[];
@@ -64,7 +64,7 @@ export default function InsumoForm({ categorias, unidades }: Props) {
             <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>Unidad de Medida:</label>
             <select value={unidad} onChange={e => setUnidad(e.target.value)} style={{ width: '100%', padding: '0.5rem' }} required>
               {unidades.map(u => (
-                <option key={u.id_unidad} value={u.id_unidad}>{u.nombre_unidad} ({u.simbolo})</option>
+                <option key={u.id_unidad} value={u.id_unidad}>{u.simbolo}</option>
               ))}
             </select>
           </div>

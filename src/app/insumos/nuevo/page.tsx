@@ -3,7 +3,7 @@ import InsumoForm from '@/components/InsumoForm';
 
 export default async function NuevoInsumoPage() {
   const categorias = await db`SELECT id_categoria_insumo, nombre_categoria FROM Categoria_Insumo ORDER BY nombre_categoria ASC`;
-  const unidades = await db`SELECT id_unidad, nombre_unidad, simbolo FROM Unidad_Medida ORDER BY nombre_unidad ASC`;
+  const unidades = await db`SELECT id_unidad, simbolo FROM Unidad_Medida ORDER BY simbolo ASC`;
 
   return (
     <div>
