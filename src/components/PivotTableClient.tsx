@@ -36,15 +36,26 @@ type DespachoDiario = {
   }[];
 };
 
+type RecetaDia = {
+  id_programa: string;
+  id_receta: number;
+  nombre_receta: string;
+  nombre_turno: string;
+  id_turno: number;
+  raciones_programadas: number;
+  raciones_producidas: number | null;
+};
+
 type Props = {
   programa: any;
   recetasProgramadas: Receta[];
   insumos: Insumo[];
   mapCruces: Record<number, Record<number, number>>;
   despachosDiarios: DespachoDiario[];
+  todasRecetasDelDia: RecetaDia[];
 };
 
-export default function PivotTableClient({ programa, recetasProgramadas, insumos, mapCruces, despachosDiarios }: Props) {
+export default function PivotTableClient({ programa, recetasProgramadas, insumos, mapCruces, despachosDiarios, todasRecetasDelDia }: Props) {
   const [mostrarProteinas, setMostrarProteinas] = useState(true);
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
   const [vista, setVista] = useState<'pivot' | 'diario' | 'consumo' | 'raciones'>('pivot');
@@ -588,41 +599,122 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
         </div>
       )}
 
-      {vista === 'raciones' && (
-        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem', backgroundColor: '#fff', border: '1px solid #ddd' }}>
-          <h2 style={{ fontSize: '1.05rem', marginBottom: '0.5rem', color: 'var(--secondary-color)', fontWeight: 600 }}>
-            📝 REGISTRO DE RACIONES REALES PRODUCIDAS
-          </h2>
-          <p style={{ color: '#666', marginBottom: '1rem', fontSize: '0.8rem' }}>
-            Ingresa la cantidad de raciones reales que la cocina llegó a preparar para cada plato en este turno.
-          </p>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f2f2f2' }}>
-                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'left' }}>RECETA</th>
-                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'center', width: '150px' }}>RACIONES ESTIMADAS</th>
-                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'center', width: '150px' }}>REAL PRODUCIDO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recetasProgramadas.map(rp => (
-                <tr key={rp.id_receta}>
-                  <td style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontWeight: 600, fontSize: '0.85rem' }}>{rp.nombre_receta}</td>
-                  <td style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>{rp.raciones_programadas}</td>
-                  <td style={{ padding: '0.2rem', border: '1px solid #ddd', textAlign: 'center' }}>
-                    <RacionesProducidasInput 
-                      id_programa={programa.id_programa}
-                      id_receta={rp.id_receta}
-                      racionesProgramadas={rp.raciones_programadas}
-                      valorInicial={rp.raciones_producidas}
-                    />
-                  </td>
+      {vista === 'raciones' && (() => {
+        // Agrupar todasRecetasDelDia por turno
+        const turnosUnicos: { nombre_turno: string; id_turno: number }[] = [];
+        const recetasPorTurno: Record<string, RecetaDia[]> = {};
+        todasRecetasDelDia.forEach(r => {
+          if (!recetasPorTurno[r.nombre_turno]) {
+            recetasPorTurno[r.nombre_turno] = [];
+            turnosUnicos.push({ nombre_turno: r.nombre_turno, id_turno: r.id_turno });
+          }
+          recetasPorTurno[r.nombre_turno].push(r);
+        });
+        // Ordenar turnos por id_turno
+        turnosUnicos.sort((a, b) => a.id_turno - b.id_turno);
+
+        const totalProgramadasDia = todasRecetasDelDia.reduce((s, r) => s + r.raciones_programadas, 0);
+
+        return (
+          <div style={{ maxWidth: '720px' }}>
+            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'var(--accent-light)', border: '1px solid #fed7aa', borderRadius: '8px' }}>
+              <p style={{ fontSize: '0.78rem', color: '#9a3412', margin: 0 }}>
+                <strong>📋 Vista consolidada del día {programa.fecha}</strong> — Muestra todos los turnos.
+                Si un mismo plato aparece en varios turnos, tiene su propia fila para evitar confusión.
+              </p>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-muted)' }}>
+                  <th style={{ padding: '0.4rem 0.6rem', border: '1px solid var(--border-subtle)', fontSize: '0.75rem', textAlign: 'left' }}>RECETA / PLATO</th>
+                  <th style={{ padding: '0.4rem 0.6rem', border: '1px solid var(--border-subtle)', fontSize: '0.75rem', textAlign: 'center', width: '140px' }}>RACIONES ESTIMADAS</th>
+                  <th style={{ padding: '0.4rem 0.6rem', border: '1px solid var(--border-subtle)', fontSize: '0.75rem', textAlign: 'center', width: '140px' }}>REAL PRODUCIDO</th>
+                  <th style={{ padding: '0.4rem 0.6rem', border: '1px solid var(--border-subtle)', fontSize: '0.75rem', textAlign: 'center', width: '90px' }}>CUMPL.</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {turnosUnicos.map(turno => {
+                  const recetas = recetasPorTurno[turno.nombre_turno] || [];
+                  const totalTurno = recetas.reduce((s, r) => s + r.raciones_programadas, 0);
+                  const isCena = turno.nombre_turno.toLowerCase().includes('cena');
+                  return (
+                    <>
+                      {/* Cabecera de turno */}
+                      <tr key={`hdr-${turno.nombre_turno}`} style={{ background: isCena ? '#1a1a2e' : '#f0f0f0' }}>
+                        <td
+                          colSpan={4}
+                          style={{
+                            padding: '0.4rem 0.6rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: isCena ? '#fff' : 'var(--text-primary)',
+                            borderLeft: `3px solid ${isCena ? 'var(--accent)' : 'var(--border-medium)'}`,
+                          }}
+                        >
+                          TURNO: {turno.nombre_turno}
+                          <span style={{ fontWeight: 400, marginLeft: '1rem', opacity: 0.7 }}>
+                            {recetas.length} platos · {totalTurno} raciones estimadas
+                          </span>
+                        </td>
+                      </tr>
+                      {/* Filas de recetas */}
+                      {recetas.map((rp, idx) => {
+                        const prod = rp.raciones_producidas;
+                        const cumpl = prod !== null && rp.raciones_programadas > 0
+                          ? (prod / rp.raciones_programadas) * 100 : null;
+                        return (
+                          <tr key={`${rp.id_programa}-${rp.id_receta}`} style={{ background: idx % 2 === 0 ? '#fff' : 'var(--bg-muted)' }}>
+                            <td style={{ padding: '0.3rem 0.6rem', border: '1px solid var(--border-subtle)', fontWeight: 500, fontSize: '0.82rem' }}>
+                              {rp.nombre_receta}
+                            </td>
+                            <td style={{ padding: '0.3rem', border: '1px solid var(--border-subtle)', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                              {rp.raciones_programadas}
+                            </td>
+                            <td style={{ padding: '0.2rem', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                              <RacionesProducidasInput
+                                id_programa={rp.id_programa}
+                                id_receta={rp.id_receta}
+                                racionesProgramadas={rp.raciones_programadas}
+                                valorInicial={rp.raciones_producidas}
+                              />
+                            </td>
+                            <td style={{ padding: '0.3rem', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                              {cumpl !== null ? (
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.1rem 0.45rem',
+                                  borderRadius: '9999px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 600,
+                                  background: cumpl >= 95 ? 'var(--success-bg)' : 'var(--warning-bg)',
+                                  color: cumpl >= 95 ? 'var(--success)' : 'var(--warning)',
+                                }}>
+                                  {cumpl.toFixed(0)}%
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </>
+                  );
+                })}
+                {/* Fila total del día */}
+                <tr style={{ background: '#1a1a2e', color: '#fff', fontWeight: 700 }}>
+                  <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: '#fff' }}>TOTAL DEL DÍA</td>
+                  <td style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--accent)' }}>{totalProgramadasDia}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 }

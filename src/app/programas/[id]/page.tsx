@@ -69,12 +69,40 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
 
   // 1. Obtener todos los programas de esa fecha
   const programasDelDia = await db`
-    SELECT p.id_programa, t.nombre_turno
+    SELECT p.id_programa, t.nombre_turno, t.id_turno
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
     WHERE p.fecha = ${fechaFormateada}
     ORDER BY t.id_turno ASC
   `;
+
+  // 1b. Todas las recetas de TODOS los programas del día (para el registro consolidado de raciones)
+  const todasRecetasDelDiaQuery = await db`
+    SELECT
+      pd.id_programa,
+      pd.id_receta,
+      r.nombre_receta,
+      t.nombre_turno,
+      t.id_turno,
+      pd.raciones_programadas,
+      pd.raciones_producidas
+    FROM Programa_Detalle pd
+    JOIN Receta r ON pd.id_receta = r.id_receta
+    JOIN Programa_Produccion p ON pd.id_programa = p.id_programa
+    JOIN Turno t ON p.id_turno = t.id_turno
+    WHERE p.fecha = ${fechaFormateada}
+    ORDER BY t.id_turno ASC, r.nombre_receta ASC
+  `;
+
+  const todasRecetasDelDia = todasRecetasDelDiaQuery.map(r => ({
+    id_programa: r.id_programa as string,
+    id_receta: r.id_receta as number,
+    nombre_receta: r.nombre_receta as string,
+    nombre_turno: r.nombre_turno as string,
+    id_turno: r.id_turno as number,
+    raciones_programadas: Number(r.raciones_programadas),
+    raciones_producidas: r.raciones_producidas !== null ? Number(r.raciones_producidas) : null,
+  }));
 
   // 2. Obtener todos los insumos de categoría 2, 3, 4, 10 del día para el consolidado
   const consumosDiariosQuery = await db`
@@ -154,6 +182,7 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
         insumos={insumosMapped} 
         mapCruces={mapCruces} 
         despachosDiarios={despachosDiarios}
+        todasRecetasDelDia={todasRecetasDelDia}
       />
     </div>
   );
