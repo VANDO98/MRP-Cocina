@@ -111,6 +111,7 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
     SELECT 
       i.id_insumo,
       i.nombre_insumo,
+      c.nombre_categoria as categoria_insumo,
       i.id_categoria_insumo,
       u.simbolo,
       dc.id_programa,
@@ -118,16 +119,18 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
       COALESCE(dc.cantidad_real_entregada, 0) as cantidad_real
     FROM Despacho_Consolidado dc
     JOIN Insumo i ON dc.id_insumo = i.id_insumo
+    LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
     JOIN Programa_Produccion p ON dc.id_programa = p.id_programa
     WHERE p.fecha = ${fechaFormateada} AND i.id_categoria_insumo IN (2, 3, 4, 10)
-    ORDER BY i.nombre_insumo ASC
+    ORDER BY c.nombre_categoria ASC, i.nombre_insumo ASC
   `;
 
   // Agrupar en JS para pasarlo de forma estructurada
   const mapaDiario: Record<number, {
     id_insumo: number;
     nombre_insumo: string;
+    categoria_insumo: string;
     simbolo: string;
     total_teorico_dia: number;
     total_real_dia: number;
@@ -139,6 +142,7 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
       mapaDiario[c.id_insumo] = {
         id_insumo: c.id_insumo,
         nombre_insumo: c.nombre_insumo,
+        categoria_insumo: (c.categoria_insumo as string) || 'Otros',
         simbolo: c.simbolo || '-',
         total_teorico_dia: 0,
         total_real_dia: 0,

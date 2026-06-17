@@ -26,6 +26,7 @@ type Receta = {
 type DespachoDiario = {
   id_insumo: number;
   nombre_insumo: string;
+  categoria_insumo: string;
   simbolo: string;
   total_teorico_dia: number;
   total_real_dia: number;
@@ -78,6 +79,18 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     insumosPorCategoria[cat].push(i);
   });
   const categoriasOrdenadas = Object.keys(insumosPorCategoria).sort((a, b) => a.localeCompare(b));
+
+  // Agrupar despachos diarios por categoría
+  const diariosPorCategoria: Record<string, DespachoDiario[]> = {};
+  despachosDiarios.forEach(d => {
+    const cat = d.categoria_insumo || 'Otros';
+    if (!diariosPorCategoria[cat]) diariosPorCategoria[cat] = [];
+    diariosPorCategoria[cat].push(d);
+  });
+  const categoriasDiarioOrdenadas = Object.keys(diariosPorCategoria).sort((a, b) => a.localeCompare(b));
+  categoriasDiarioOrdenadas.forEach(c => {
+    diariosPorCategoria[c].sort((a, b) => a.nombre_insumo.localeCompare(b.nombre_insumo));
+  });
 
   // Preparar filas para la tabla plana de consumos agrupadas por receta
   const filasConsumo: any[] = [];
@@ -559,34 +572,51 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
               </tr>
             </thead>
             <tbody>
-              {despachosDiarios.map(dd => (
-                <tr key={dd.id_insumo} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ fontWeight: 600, border: '1px solid #ddd', padding: '0.4rem 0.5rem', fontSize: '0.85rem' }}>
-                    {dd.nombre_insumo} ({dd.simbolo})
-                  </td>
-                  <td style={{ textAlign: 'right', border: '1px solid #ddd', padding: '0.4rem 0.5rem', fontSize: '0.85rem', backgroundColor: '#fcfdfd' }}>
-                    {dd.total_teorico_dia.toFixed(4).replace(/\.?0+$/, '')}
-                  </td>
-                  <td style={{ textAlign: 'center', border: '1px solid #ddd', padding: '0.2rem 0.5rem', backgroundColor: '#fffdf9' }}>
-                    <DespachoDiarioInput 
-                      fecha={programa.fecha} 
-                      id_insumo={dd.id_insumo} 
-                      valorInicial={dd.total_real_dia} 
-                    />
-                  </td>
-                  <td style={{ border: '1px solid #ddd', padding: '0.4rem 0.5rem', fontSize: '0.8rem', color: '#555' }}>
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      {dd.desgloses.map((dg, idx) => (
-                        <span key={idx} style={{ backgroundColor: '#f5f5f5', padding: '0.15rem 0.4rem', borderRadius: '3px', border: '1px solid #e2d9cd' }}>
-                          <strong>{dg.nombre_turno}:</strong> {dg.cantidad_real.toFixed(4).replace(/\.?0+$/, '')} {dd.simbolo} 
-                          <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.25rem' }}>
-                            (Teo: {dg.cantidad_teorica.toFixed(4).replace(/\.?0+$/, '')})
-                          </span>
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
+              {categoriasDiarioOrdenadas.map(cat => (
+                <React.Fragment key={cat}>
+                  {/* Cabecera de Categoría */}
+                  <tr style={{ background: '#f8f9fa' }}>
+                    <td colSpan={4} style={{ 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      color: 'var(--accent)', 
+                      padding: '0.5rem 0.6rem', 
+                      textTransform: 'uppercase', 
+                      borderBottom: '2px solid var(--border-medium)' 
+                    }}>
+                      {cat}
+                    </td>
+                  </tr>
+                  {diariosPorCategoria[cat].map(dd => (
+                    <tr key={dd.id_insumo} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ fontWeight: 600, border: '1px solid #ddd', padding: '0.4rem 0.5rem', paddingLeft: '1.2rem', fontSize: '0.85rem' }}>
+                        {dd.nombre_insumo} ({dd.simbolo})
+                      </td>
+                      <td style={{ textAlign: 'right', border: '1px solid #ddd', padding: '0.4rem 0.5rem', fontSize: '0.85rem', backgroundColor: '#fcfdfd' }}>
+                        {dd.total_teorico_dia.toFixed(4).replace(/\.?0+$/, '')}
+                      </td>
+                      <td style={{ textAlign: 'center', border: '1px solid #ddd', padding: '0.2rem 0.5rem', backgroundColor: '#fffdf9' }}>
+                        <DespachoDiarioInput 
+                          fecha={programa.fecha} 
+                          id_insumo={dd.id_insumo} 
+                          valorInicial={dd.total_real_dia} 
+                        />
+                      </td>
+                      <td style={{ border: '1px solid #ddd', padding: '0.4rem 0.5rem', fontSize: '0.8rem', color: '#555' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          {dd.desgloses.map((dg, idx) => (
+                            <span key={idx} style={{ backgroundColor: '#f5f5f5', padding: '0.15rem 0.4rem', borderRadius: '3px', border: '1px solid #e2d9cd' }}>
+                              <strong>{dg.nombre_turno}:</strong> {dg.cantidad_real.toFixed(4).replace(/\.?0+$/, '')} {dd.simbolo} 
+                              <span style={{ color: '#888', fontSize: '0.75rem', marginLeft: '0.25rem' }}>
+                                (Teo: {dg.cantidad_teorica.toFixed(4).replace(/\.?0+$/, '')})
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
               ))}
               {despachosDiarios.length === 0 && (
                 <tr>
