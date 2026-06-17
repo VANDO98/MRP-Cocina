@@ -6,25 +6,11 @@ export const metadata = {
   description: 'Sistema de control de recetas, insumos y programación de producción diaria.',
 }
 
-const marqueeItems = [
-  'Programas de Producción',
-  'Consolidado de Insumos',
-  'Control de Recetas',
-  'Despacho Diario',
-  'Catálogo de Insumos',
-  'Ratios BOM',
-  'Asertividad de Raciones',
-  'Exportación Excel',
-  'Eficiencia por Turno',
-]
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const doubled = [...marqueeItems, ...marqueeItems]
-
   return (
     <html lang="es">
       <body>
@@ -45,18 +31,6 @@ export default function RootLayout({
         <main className="container">
           {children}
         </main>
-
-        {/* ── FOOTER CON CINTA MARQUEE ── */}
-        <footer className="footer-marquee no-print">
-          <div className="marquee-track">
-            {doubled.map((item, i) => (
-              <span key={i} className="marquee-item">
-                {item}
-                <span className="marquee-sep">/</span>
-              </span>
-            ))}
-          </div>
-        </footer>
       </body>
     </html>
   )
