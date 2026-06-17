@@ -112,46 +112,91 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     alert('¡Tabla copiada al portapapeles! Ya puedes pegarla en Excel con Ctrl+V.');
   };
 
+  const getTurnoLogico = (nombreReceta: string): string => {
+    const nombre = nombreReceta.trim().toUpperCase();
+    if (nombre.startsWith('BF') || nombre.startsWith('DESAYUNO') || nombre.startsWith('DES')) return 'Desayuno';
+    if (nombre.startsWith('RB') || nombre.startsWith('ALMUERZO') || nombre.startsWith('ALM') || nombre.startsWith('LN')) return 'Almuerzo';
+    if (nombre.startsWith('CN') || nombre.startsWith('CENA') || nombre.startsWith('CEN')) return 'Cena';
+    return 'Otros';
+  };
+
   const exportarExcel = () => {
     const wb = XLSX.utils.book_new();
     const data: any[][] = [];
 
-    // Fila 1: Raciones estimadas
-    const filaRacionesEst = ['', 'RACIONES EST.:', ''];
-    recetasProgramadas.forEach(rp => {
-      filaRacionesEst.push(rp.raciones_programadas.toString());
-    });
-    data.push(filaRacionesEst);
+    // 1. Clasificar recetas por turno lógico
+    const recetasConTurno = recetasProgramadas.map(rp => ({
+      ...rp,
+      turnoLogico: getTurnoLogico(rp.nombre_receta)
+    }));
 
-    // Fila 2: Real producido
-    const filaRealProducido = ['', 'REAL PRODUCIDO:', ''];
-    recetasProgramadas.forEach(rp => {
-      filaRealProducido.push(rp.raciones_producidas !== null ? rp.raciones_producidas.toString() : '0');
+    // 2. Obtener lista de turnos lógicos activos en este programa
+    const turnosActivosSet = new Set<string>();
+    recetasConTurno.forEach(rp => {
+      turnosActivosSet.add(rp.turnoLogico);
     });
-    data.push(filaRealProducido);
+    const ordenTurnos = ['Desayuno', 'Almuerzo', 'Cena', 'Otros'];
+    const turnosActivos = ordenTurnos.filter(t => turnosActivosSet.has(t));
+    turnosActivosSet.forEach(t => {
+      if (!turnosActivos.includes(t)) {
+        turnosActivos.push(t);
+      }
+    });
 
-    // Fila 3: Encabezados
+    // Encabezados informativos iniciales
+    data.push([`CONSOLIDADO DE PRODUCTOS - PROGRAMA: ${programa.id_programa}`]);
+    data.push([`Fecha: ${programa.fecha}`, `Turno General: ${programa.nombre_turno}`]);
+    data.push([]); // Fila vacía para separar
+
+    // Fila 4: Encabezados de columnas de Excel
     const filaEncabezados = ['INSUMO (UNIDAD)', 'TOTAL CONSOLIDADO', 'TOTAL ENTREGADO'];
-    recetasProgramadas.forEach(rp => {
-      filaEncabezados.push(rp.nombre_receta);
+    turnosActivos.forEach(t => {
+      filaEncabezados.push(t.toUpperCase());
     });
     data.push(filaEncabezados);
 
     // Filas de insumos
     filteredInsumos.forEach(insumo => {
+      // Calcular la cantidad requerida por cada turno activo
+      const cantidadesPorTurno: Record<string, number> = {};
+      turnosActivos.forEach(t => {
+        cantidadesPorTurno[t] = 0;
+      });
+
+      recetasConTurno.forEach(rp => {
+        const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
+        if (valor) {
+          cantidadesPorTurno[rp.turnoLogico] += valor;
+        }
+      });
+
       const fila = [
         `${insumo.nombre_insumo} (${insumo.simbolo || '-'})`,
-        insumo.total_teorico,
-        insumo.total_real !== null ? insumo.total_real : 0
+        Number(insumo.total_teorico.toFixed(4)),
+        insumo.total_real !== null ? Number(insumo.total_real) : 0
       ];
-      recetasProgramadas.forEach(rp => {
-        const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
-        fila.push(valor ? Number(valor.toFixed(4)) : '');
+
+      turnosActivos.forEach(t => {
+        const valorTurno = cantidadesPorTurno[t];
+        fila.push(valorTurno > 0 ? Number(valorTurno.toFixed(4)) : '');
       });
+
       data.push(fila);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Dar anchos automáticos y holgados a las columnas de Excel
+    const wscols = [
+      { wch: 38 }, // Insumo (Unidad)
+      { wch: 20 }, // Total Consolidado
+      { wch: 20 }, // Total Entregado
+    ];
+    turnosActivos.forEach(() => {
+      wscols.push({ wch: 15 }); // Cada columna de turno
+    });
+    ws['!cols'] = wscols;
+
     XLSX.utils.book_append_sheet(wb, ws, 'Consolidado');
     XLSX.writeFile(wb, `Consolidado_${programa.id_programa}.xlsx`);
   };
