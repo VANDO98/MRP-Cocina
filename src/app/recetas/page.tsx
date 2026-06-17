@@ -10,7 +10,8 @@ export default async function RecetasPage() {
   `;
 
   // Agrupar por categoría
-  const porCategoria: Record<string, typeof recetas> = {};
+  type RecetaRow = (typeof recetas)[number];
+  const porCategoria: Record<string, RecetaRow[]> = {};
   recetas.forEach(r => {
     const cat = r.nombre_categoria || 'Sin categoría';
     if (!porCategoria[cat]) porCategoria[cat] = [];
