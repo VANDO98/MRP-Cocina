@@ -4,6 +4,7 @@ import { useState } from 'react';
 import DespachoInput from './DespachoInput';
 import RacionesProducidasInput from './RacionesProducidasInput';
 import DespachoDiarioInput from './DespachoDiarioInput';
+import * as XLSX from 'xlsx';
 
 type Insumo = {
   id_insumo: number;
@@ -111,6 +112,50 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     alert('¡Tabla copiada al portapapeles! Ya puedes pegarla en Excel con Ctrl+V.');
   };
 
+  const exportarExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const data: any[][] = [];
+
+    // Fila 1: Raciones estimadas
+    const filaRacionesEst = ['', 'RACIONES EST.:', ''];
+    recetasProgramadas.forEach(rp => {
+      filaRacionesEst.push(rp.raciones_programadas.toString());
+    });
+    data.push(filaRacionesEst);
+
+    // Fila 2: Real producido
+    const filaRealProducido = ['', 'REAL PRODUCIDO:', ''];
+    recetasProgramadas.forEach(rp => {
+      filaRealProducido.push(rp.raciones_producidas !== null ? rp.raciones_producidas.toString() : '0');
+    });
+    data.push(filaRealProducido);
+
+    // Fila 3: Encabezados
+    const filaEncabezados = ['INSUMO (UNIDAD)', 'TOTAL CONSOLIDADO', 'TOTAL ENTREGADO'];
+    recetasProgramadas.forEach(rp => {
+      filaEncabezados.push(rp.nombre_receta);
+    });
+    data.push(filaEncabezados);
+
+    // Filas de insumos
+    filteredInsumos.forEach(insumo => {
+      const fila = [
+        `${insumo.nombre_insumo} (${insumo.simbolo || '-'})`,
+        insumo.total_teorico,
+        insumo.total_real !== null ? insumo.total_real : 0
+      ];
+      recetasProgramadas.forEach(rp => {
+        const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
+        fila.push(valor ? Number(valor.toFixed(4)) : '');
+      });
+      data.push(fila);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Consolidado');
+    XLSX.writeFile(wb, `Consolidado_${programa.id_programa}.xlsx`);
+  };
+
   return (
     <div>
       {/* Selector de vistas minimalista estilo pestañas de Excel */}
@@ -207,6 +252,11 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
           {vista === 'consumo' && (
             <button className="btn" onClick={copiarAlPortapapeles} style={{ backgroundColor: '#2e7d32', padding: '0.35rem 0.8rem', fontSize: '0.85rem' }}>
               📋 Copiar para Excel
+            </button>
+          )}
+          {vista === 'pivot' && (
+            <button className="btn" onClick={exportarExcel} style={{ backgroundColor: '#1f6f43', padding: '0.35rem 0.8rem', fontSize: '0.85rem' }}>
+              📥 Descargar Excel
             </button>
           )}
           <button className="btn" onClick={() => window.print()} style={{ padding: '0.35rem 0.8rem', fontSize: '0.85rem' }}>
