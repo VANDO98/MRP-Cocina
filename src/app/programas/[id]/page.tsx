@@ -139,7 +139,7 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <Link href="/programas" style={{ color: 'var(--secondary-color)', textDecoration: 'none', fontWeight: 600 }}>
+      <Link href="/programas" className="no-print" style={{ color: 'var(--secondary-color)', textDecoration: 'none', fontWeight: 600 }}>
         &larr; Volver a Programas
       </Link>
       

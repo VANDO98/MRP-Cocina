@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
   --bg-color: #fcfbf9;
@@ -8,45 +8,46 @@
   --accent-color: #e8e3dc;
   --card-bg: #ffffff;
   --border-color: #cccccc;
-  --excel-header: #e0e0e0;
+  --excel-header: #f2f2f2;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  border-radius: 0 !important; /* Elimina bordes redondeados en TODA la aplicación */
 }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-size: 13px; /* Más similar a Excel */
-  line-height: 1.3;
+  font-size: 12px; /* Más compacto para parecerse a Excel */
+  line-height: 1.25;
 }
 
 /* Layout */
 .container {
-  max-width: 98%;
+  max-width: 99%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 /* Header / Nav */
 .header {
   background-color: var(--primary-color);
   color: #fff;
-  padding: 0.5rem 1.5rem;
+  padding: 0.4rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .header a {
   color: var(--accent-color);
   text-decoration: none;
-  margin-left: 1.5rem;
+  margin-left: 1.2rem;
   font-weight: 500;
 }
 
@@ -57,24 +58,24 @@ body {
 /* Typography */
 h1, h2, h3 {
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
   color: var(--text-color);
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
 }
 
 h2 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 /* Cards */
 .card {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
 }
 
 /* Tables (Excel style) */
@@ -82,13 +83,13 @@ table {
   width: 100%;
   border-collapse: collapse;
   background-color: var(--card-bg);
-  font-size: 12px; /* Letra pequeña y compacta */
+  font-size: 11px; /* Más compacto */
 }
 
 th, td {
-  padding: 0.25rem 0.5rem;
+  padding: 0.15rem 0.3rem; /* Margen muy apretado */
   text-align: left;
-  border: 1px solid var(--border-color); /* Borde en todas las celdas como en Excel */
+  border: 1px solid var(--border-color); /* Borde plano como en Excel */
   vertical-align: middle;
 }
 
@@ -105,19 +106,28 @@ tr:hover td {
 /* Inputs / Buttons */
 input, select, textarea {
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   border: 1px solid var(--border-color);
-  padding: 0.2rem 0.4rem;
+  padding: 0.1rem 0.25rem;
+  background-color: #fff;
+  outline: none;
+}
+
+/* Forzar que las cajas de texto de despacho y raciones se vean planas */
+input.despacho-input, input.raciones-input {
+  border-radius: 0 !important;
+  padding: 0.1rem 0.2rem !important;
+  font-size: 11px !important;
 }
 
 .btn {
   display: inline-block;
   background-color: var(--secondary-color);
   color: #fff;
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.6rem;
   text-decoration: none;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   border: 1px solid #5d4037;
   cursor: pointer;
 }
@@ -129,41 +139,74 @@ input, select, textarea {
 /* Utilities */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
 }
 
 /* Impresión a PDF */
 @media print {
+  @page {
+    margin: 0.4cm; /* Aprovecha casi toda la hoja */
+  }
+
   .no-print {
     display: none !important;
   }
   
   body {
     background-color: white;
-    font-size: 11px;
-    padding: 0;
-    margin: 0;
+    font-size: 8px; /* Texto ultra-compacto para impresión */
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #000;
   }
   
   .container {
     max-width: 100%;
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   
   .card {
     border: none;
-    padding: 0;
-    margin-bottom: 0.5rem;
+    padding: 0 !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  h1 {
+    font-size: 1rem !important;
+    margin-bottom: 0.05rem !important;
+  }
+
+  p {
+    margin-bottom: 0.1rem !important;
+    font-size: 7.5px !important;
   }
 
   table {
-    font-size: 10px;
+    font-size: 8px !important; /* Letra de Excel compacto */
+    width: 100% !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
   }
   
   th, td {
-    border: 1px solid #000;
+    padding: 1px 2px !important; /* Celdas ultra-apretadas para ahorrar espacio vertical */
+    border: 1px solid #999 !important; /* Bordes grises delgados */
+  }
+
+  /* Planitud absoluta para inputs al imprimir */
+  input, input.despacho-input, input.raciones-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-weight: normal !important;
+    font-size: 8px !important;
+    text-align: center !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    color: #000 !important;
   }
 }
 
@@ -172,11 +215,10 @@ input, select, textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.5rem;
+  gap: 0.2rem;
+  padding: 0.2rem 0.4rem;
   font-size: 11px;
   font-weight: 500;
-  border-radius: 4px;
   border: 1px solid #d1d5db;
   background-color: #ffffff;
   color: #374151;

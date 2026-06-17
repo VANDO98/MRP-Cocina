@@ -2,8 +2,20 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const postgres = require('postgres');
 
-// Cargar variables de entorno si existe .env.local
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
+const fs = require('fs');
+
+// Cargar variables de entorno manualmente si existe .env.local
+const envPath = path.resolve(__dirname, '../.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const match = line.match(/^\s*DATABASE_URL\s*=\s*["']?(.*?)["']?\s*$/);
+    if (match) {
+      process.env.DATABASE_URL = match[1];
+      break;
+    }
+  }
+}
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -126,25 +138,18 @@ async function runMigration() {
         continue;
       }
 
-      // Inserción en bloques
+      // Preparar filas
       for (const row of rows) {
         // En Postgres, los campos Date deben ser strings en formato ISO o YYYY-MM-DD
         if (row.fecha) {
           row.fecha = new Date(row.fecha).toISOString().split('T')[0];
         }
-        
-        const keys = Object.keys(row);
-        const columns = keys.join(', ');
-        
-        // Generar los placeholders de Postgres: $1, $2, etc.
-        const values = keys.map((_, i) => `$${i + 1}`).join(', ');
-        const rowValues = keys.map(k => row[k]);
-
-        await sql.unsafe(
-          `INSERT INTO ${table.name} (${columns}) VALUES (${values})`,
-          rowValues
-        );
       }
+
+      // Inserción masiva ultra rápida
+      await sql`
+        INSERT INTO ${sql(table.name.toLowerCase())} ${sql(rows)}
+      `;
 
       // Ajustar las secuencias si la tabla tiene clave primaria SERIAL autoincrementable
       if (table.idCol) {
