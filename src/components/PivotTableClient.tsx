@@ -44,38 +44,14 @@ type Props = {
   despachosDiarios: DespachoDiario[];
 };
 
-const getTurnoLogico = (nombreReceta: string): string => {
-  const nombre = nombreReceta.trim().toUpperCase();
-  if (nombre.startsWith('BF') || nombre.startsWith('DESAYUNO') || nombre.startsWith('DES')) return 'Desayuno';
-  if (nombre.startsWith('RB') || nombre.startsWith('ALMUERZO') || nombre.startsWith('ALM') || nombre.startsWith('LN')) return 'Almuerzo';
-  if (nombre.startsWith('CN') || nombre.startsWith('CENA') || nombre.startsWith('CEN')) return 'Cena';
-  return 'Otros';
-};
-
 export default function PivotTableClient({ programa, recetasProgramadas, insumos, mapCruces, despachosDiarios }: Props) {
   const [mostrarProteinas, setMostrarProteinas] = useState(true);
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
   const [vista, setVista] = useState<'pivot' | 'diario' | 'consumo' | 'raciones'>('pivot');
   const [mostrarDetalleRecetas, setMostrarDetalleRecetas] = useState(false);
 
-  // Clasificar recetas por turno lógico
-  const recetasConTurno = recetasProgramadas.map(rp => ({
-    ...rp,
-    turnoLogico: getTurnoLogico(rp.nombre_receta)
-  }));
-
-  // Obtener lista de turnos lógicos activos
-  const turnosActivosSet = new Set<string>();
-  recetasConTurno.forEach(rp => {
-    turnosActivosSet.add(rp.turnoLogico);
-  });
-  const ordenTurnos = ['Desayuno', 'Almuerzo', 'Cena', 'Otros'];
-  const turnosActivos = ordenTurnos.filter(t => turnosActivosSet.has(t));
-  turnosActivosSet.forEach(t => {
-    if (!turnosActivos.includes(t)) {
-      turnosActivos.push(t);
-    }
-  });
+  // El turno activo para este programa consolidado es el turno general oficial
+  const turnosActivos = [programa.nombre_turno];
 
   const filteredInsumos = insumos.filter(i => {
     const isProteinaVerdura = [2, 3, 4, 10].includes(i.id_categoria_insumo);
@@ -159,17 +135,9 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     // Filas de insumos
     filteredInsumos.forEach(insumo => {
       // Calcular la cantidad requerida por cada turno activo
-      const cantidadesPorTurno: Record<string, number> = {};
-      turnosActivos.forEach(t => {
-        cantidadesPorTurno[t] = 0;
-      });
-
-      recetasConTurno.forEach(rp => {
-        const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
-        if (valor) {
-          cantidadesPorTurno[rp.turnoLogico] += valor;
-        }
-      });
+      const cantidadesPorTurno = {
+        [programa.nombre_turno]: insumo.total_teorico
+      };
 
       const fila = [
         `${insumo.nombre_insumo} (${insumo.simbolo || '-'})`,
@@ -473,17 +441,9 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
               <tbody>
                 {filteredInsumos.map(insumo => {
                   // Calcular cantidades por turno para este insumo (usado si mostrarDetalleRecetas es false)
-                  const cantidadesPorTurno: Record<string, number> = {};
-                  turnosActivos.forEach(t => {
-                    cantidadesPorTurno[t] = 0;
-                  });
-
-                  recetasConTurno.forEach(rp => {
-                    const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
-                    if (valor) {
-                      cantidadesPorTurno[rp.turnoLogico] += valor;
-                    }
-                  });
+                  const cantidadesPorTurno: Record<string, number> = {
+                    [programa.nombre_turno]: insumo.total_teorico
+                  };
 
                   return (
                     <tr key={insumo.id_insumo}>
