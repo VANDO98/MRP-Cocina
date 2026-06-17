@@ -1,7 +1,7 @@
-import { db } from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PrintButton from '@/components/PrintButton';
+import React from 'react';
 
 export default async function DiaProgramasPage({ params }: { params: Promise<{ fecha: string }> }) {
   const { fecha } = await params;
@@ -36,21 +36,24 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
     SELECT
       i.id_insumo,
       i.nombre_insumo,
+      c.nombre_categoria AS categoria_insumo,
       u.simbolo,
       dc.id_programa,
       dc.cantidad_teorica_calculada                 AS cantidad_teorica,
       COALESCE(dc.cantidad_real_entregada, 0)       AS cantidad_real
     FROM Despacho_Consolidado dc
     JOIN Insumo i       ON dc.id_insumo  = i.id_insumo
+    LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
     WHERE dc.id_programa = ANY(${ids})
-    ORDER BY i.nombre_insumo ASC
+    ORDER BY c.nombre_categoria ASC, i.nombre_insumo ASC
   `;
 
   // ── 3. Agrupar en JS ──────────────────────────────────────────────────────
   type FilaInsumo = {
     id_insumo: number;
     nombre_insumo: string;
+    categoria_insumo: string;
     simbolo: string;
     total_teorico: number;
     total_real: number;
@@ -72,6 +75,7 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
       mapaInsumos[id] = {
         id_insumo: id,
         nombre_insumo: d.nombre_insumo as string,
+        categoria_insumo: (d.categoria_insumo as string) || 'Otros',
         simbolo: (d.simbolo as string) || '-',
         total_teorico: 0,
         total_real: 0,
@@ -85,9 +89,33 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
       (mapaInsumos[id].por_turno[nombreTurno] ?? 0) + teo;
   }
 
-  const filas = Object.values(mapaInsumos).sort((a, b) =>
-    a.nombre_insumo.localeCompare(b.nombre_insumo)
-  );
+  // Agrupar por categoría
+  const agrupadoPorCategoria: Record<string, FilaInsumo[]> = {};
+  for (const fila of Object.values(mapaInsumos)) {
+    const cat = fila.categoria_insumo;
+    if (!agrupadoPorCategoria[cat]) agrupadoPorCategoria[cat] = [];
+    agrupadoPorCategoria[cat].push(fila);
+  }
+
+  const categoriasOrdenadas = Object.keys(agrupadoPorCategoria).sort((a, b) => a.localeCompare(b));
+  
+  // Ordenar alfabéticamente dentro de cada categoría y contar totales
+  let totalInsumos = 0;
+  let totalTeoricoG = 0;
+  let totalRealG = 0;
+  const totalTurnosG: Record<string, number> = {};
+
+  categoriasOrdenadas.forEach(c => {
+    agrupadoPorCategoria[c].sort((a, b) => a.nombre_insumo.localeCompare(b.nombre_insumo));
+    totalInsumos += agrupadoPorCategoria[c].length;
+    agrupadoPorCategoria[c].forEach(f => {
+      totalTeoricoG += f.total_teorico;
+      totalRealG += f.total_real;
+      Object.entries(f.por_turno).forEach(([t, v]) => {
+        totalTurnosG[t] = (totalTurnosG[t] ?? 0) + v;
+      });
+    });
+  });
 
   // Nombres de turnos (columnas dinámicas)
   const nombresTurnos = turnos.map(t => t.nombre_turno);
@@ -109,7 +137,7 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
           </Link>
           <h1 style={{ marginTop: '0.5rem' }}>Consolidado de <em>Insumos</em></h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', textTransform: 'capitalize' }}>
-            {fechaDisplay} · {turnos.length} turno{turnos.length !== 1 ? 's' : ''} · {filas.length} insumos
+            {fechaDisplay} · {turnos.length} turno{turnos.length !== 1 ? 's' : ''} · {totalInsumos} insumos
           </p>
         </div>
         <PrintButton />
@@ -175,73 +203,91 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
             </tr>
           </thead>
           <tbody>
-            {filas.map((fila, idx) => {
-              const totalTeo  = fila.total_teorico;
-              const totalReal = fila.total_real;
-              const isAlternate = idx % 2 === 1;
-
-              return (
-                <tr
-                  key={fila.id_insumo}
-                  style={{ background: isAlternate ? 'var(--bg-muted)' : 'var(--bg-surface)' }}
-                >
-                  <td style={{ fontWeight: 500, fontSize: '11px' }}>
-                    {fila.nombre_insumo.toUpperCase()}
-                    <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: '0.3rem' }}>
-                      ({fila.simbolo})
-                    </span>
-                  </td>
-                  <td style={{
-                    textAlign: 'center', fontWeight: 700, fontSize: '11px',
-                    background: isAlternate ? '#eef0f8' : '#f5f6fc',
-                    color: '#1a1a2e',
+            {categoriasOrdenadas.map((cat) => (
+              <React.Fragment key={cat}>
+                {/* Cabecera de Categoría */}
+                <tr style={{ background: '#f8f9fa' }}>
+                  <td colSpan={3 + nombresTurnos.length} style={{ 
+                    fontWeight: 700, 
+                    fontSize: '11px', 
+                    color: 'var(--accent)',
+                    padding: '0.5rem 0.4rem',
+                    textTransform: 'uppercase',
+                    borderBottom: '2px solid var(--border-medium)'
                   }}>
-                    {totalTeo > 0 ? totalTeo.toFixed(3).replace(/\.?0+$/, '') : '0'}
+                    {cat}
                   </td>
-                  <td style={{
-                    textAlign: 'center', fontSize: '11px',
-                    color: totalReal > 0 ? 'var(--success)' : 'var(--text-tertiary)',
-                    fontWeight: totalReal > 0 ? 600 : 400,
-                  }}>
-                    {totalReal > 0 ? totalReal.toFixed(3).replace(/\.?0+$/, '') : '0'}
-                  </td>
-                  {nombresTurnos.map(turno => {
-                    const val = fila.por_turno[turno] ?? 0;
-                    return (
-                      <td
-                        key={turno}
-                        style={{
-                          textAlign: 'center',
-                          fontSize: '11px',
-                          fontWeight: val > 0 ? 500 : 400,
-                          color: val > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                          background: val > 0
-                            ? (turno.toLowerCase().includes('cena')
-                              ? (isAlternate ? '#fff3e0' : '#fffbf5')
-                              : 'transparent')
-                            : 'transparent',
-                        }}
-                      >
-                        {val > 0 ? val.toFixed(3).replace(/\.?0+$/, '') : '—'}
-                      </td>
-                    );
-                  })}
                 </tr>
-              );
-            })}
+                {/* Filas de Insumos */}
+                {agrupadoPorCategoria[cat].map((fila, idx) => {
+                  const totalTeo  = fila.total_teorico;
+                  const totalReal = fila.total_real;
+                  const isAlternate = idx % 2 === 1;
+
+                  return (
+                    <tr
+                      key={fila.id_insumo}
+                      style={{ background: isAlternate ? 'var(--bg-muted)' : 'var(--bg-surface)' }}
+                    >
+                      <td style={{ fontWeight: 500, fontSize: '11px', paddingLeft: '1rem' }}>
+                        {fila.nombre_insumo.toUpperCase()}
+                        <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: '0.3rem' }}>
+                          ({fila.simbolo})
+                        </span>
+                      </td>
+                      <td style={{
+                        textAlign: 'center', fontWeight: 700, fontSize: '11px',
+                        background: isAlternate ? '#eef0f8' : '#f5f6fc',
+                        color: '#1a1a2e',
+                      }}>
+                        {totalTeo > 0 ? totalTeo.toFixed(3).replace(/\.?0+$/, '') : '0'}
+                      </td>
+                      <td style={{
+                        textAlign: 'center', fontSize: '11px',
+                        color: totalReal > 0 ? 'var(--success)' : 'var(--text-tertiary)',
+                        fontWeight: totalReal > 0 ? 600 : 400,
+                      }}>
+                        {totalReal > 0 ? totalReal.toFixed(3).replace(/\.?0+$/, '') : '0'}
+                      </td>
+                      {nombresTurnos.map(turno => {
+                        const val = fila.por_turno[turno] ?? 0;
+                        return (
+                          <td
+                            key={turno}
+                            style={{
+                              textAlign: 'center',
+                              fontSize: '11px',
+                              fontWeight: val > 0 ? 500 : 400,
+                              color: val > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                              background: val > 0
+                                ? (turno.toLowerCase().includes('cena')
+                                  ? (isAlternate ? '#fff3e0' : '#fffbf5')
+                                  : 'transparent')
+                                : 'transparent',
+                            }}
+                          >
+                            {val > 0 ? val.toFixed(3).replace(/\.?0+$/, '') : '—'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            ))}
 
             {/* TOTALES */}
             <tr style={{ background: '#1a1a2e', color: '#fff', fontWeight: 700 }}>
               <td style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>TOTAL GENERAL</td>
               <td style={{ textAlign: 'center', fontSize: '11px', color: 'var(--accent)' }}>
-                {filas.reduce((s, f) => s + f.total_teorico, 0).toFixed(2)}
+                {totalTeoricoG.toFixed(2)}
               </td>
               <td style={{ textAlign: 'center', fontSize: '11px', color: '#6ee7b7' }}>
-                {filas.reduce((s, f) => s + f.total_real, 0).toFixed(2)}
+                {totalRealG.toFixed(2)}
               </td>
               {nombresTurnos.map(turno => (
                 <td key={turno} style={{ textAlign: 'center', fontSize: '11px', color: '#fed7aa' }}>
-                  {filas.reduce((s, f) => s + (f.por_turno[turno] ?? 0), 0).toFixed(2)}
+                  {(totalTurnosG[turno] ?? 0).toFixed(2)}
                 </td>
               ))}
             </tr>

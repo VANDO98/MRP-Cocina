@@ -36,17 +36,19 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
 
   // Traer consolidado y datos de insumos
   const insumosQuery = await db`
-    SELECT i.id_insumo, i.nombre_insumo, i.id_categoria_insumo, u.simbolo, dc.cantidad_teorica_calculada as total_teorico, dc.cantidad_real_entregada as total_real
+    SELECT i.id_insumo, i.nombre_insumo, c.nombre_categoria as categoria_insumo, i.id_categoria_insumo, u.simbolo, dc.cantidad_teorica_calculada as total_teorico, dc.cantidad_real_entregada as total_real
     FROM Despacho_Consolidado dc
     JOIN Insumo i ON dc.id_insumo = i.id_insumo
+    LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
     WHERE dc.id_programa = ${id}
-    ORDER BY i.nombre_insumo ASC
+    ORDER BY c.nombre_categoria ASC, i.nombre_insumo ASC
   `;
 
   const insumosMapped = insumosQuery.map(i => ({
     id_insumo: i.id_insumo,
     nombre_insumo: i.nombre_insumo,
+    categoria_insumo: i.categoria_insumo || 'Otros',
     id_categoria_insumo: i.id_categoria_insumo,
     simbolo: i.simbolo || '-',
     total_teorico: Number(i.total_teorico || 0),
