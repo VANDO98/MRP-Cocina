@@ -44,10 +44,37 @@ type Props = {
   despachosDiarios: DespachoDiario[];
 };
 
+const getTurnoLogico = (nombreReceta: string): string => {
+  const nombre = nombreReceta.trim().toUpperCase();
+  if (nombre.startsWith('BF') || nombre.startsWith('DESAYUNO') || nombre.startsWith('DES')) return 'Desayuno';
+  if (nombre.startsWith('RB') || nombre.startsWith('ALMUERZO') || nombre.startsWith('ALM') || nombre.startsWith('LN')) return 'Almuerzo';
+  if (nombre.startsWith('CN') || nombre.startsWith('CENA') || nombre.startsWith('CEN')) return 'Cena';
+  return 'Otros';
+};
+
 export default function PivotTableClient({ programa, recetasProgramadas, insumos, mapCruces, despachosDiarios }: Props) {
   const [mostrarProteinas, setMostrarProteinas] = useState(true);
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
   const [vista, setVista] = useState<'pivot' | 'consumo' | 'diario'>('pivot');
+
+  // Clasificar recetas por turno lógico
+  const recetasConTurno = recetasProgramadas.map(rp => ({
+    ...rp,
+    turnoLogico: getTurnoLogico(rp.nombre_receta)
+  }));
+
+  // Obtener lista de turnos lógicos activos
+  const turnosActivosSet = new Set<string>();
+  recetasConTurno.forEach(rp => {
+    turnosActivosSet.add(rp.turnoLogico);
+  });
+  const ordenTurnos = ['Desayuno', 'Almuerzo', 'Cena', 'Otros'];
+  const turnosActivos = ordenTurnos.filter(t => turnosActivosSet.has(t));
+  turnosActivosSet.forEach(t => {
+    if (!turnosActivos.includes(t)) {
+      turnosActivos.push(t);
+    }
+  });
 
   const filteredInsumos = insumos.filter(i => {
     const isProteinaVerdura = [2, 3, 4, 10].includes(i.id_categoria_insumo);
@@ -112,36 +139,9 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     alert('¡Tabla copiada al portapapeles! Ya puedes pegarla en Excel con Ctrl+V.');
   };
 
-  const getTurnoLogico = (nombreReceta: string): string => {
-    const nombre = nombreReceta.trim().toUpperCase();
-    if (nombre.startsWith('BF') || nombre.startsWith('DESAYUNO') || nombre.startsWith('DES')) return 'Desayuno';
-    if (nombre.startsWith('RB') || nombre.startsWith('ALMUERZO') || nombre.startsWith('ALM') || nombre.startsWith('LN')) return 'Almuerzo';
-    if (nombre.startsWith('CN') || nombre.startsWith('CENA') || nombre.startsWith('CEN')) return 'Cena';
-    return 'Otros';
-  };
-
   const exportarExcel = () => {
     const wb = XLSX.utils.book_new();
     const data: any[][] = [];
-
-    // 1. Clasificar recetas por turno lógico
-    const recetasConTurno = recetasProgramadas.map(rp => ({
-      ...rp,
-      turnoLogico: getTurnoLogico(rp.nombre_receta)
-    }));
-
-    // 2. Obtener lista de turnos lógicos activos en este programa
-    const turnosActivosSet = new Set<string>();
-    recetasConTurno.forEach(rp => {
-      turnosActivosSet.add(rp.turnoLogico);
-    });
-    const ordenTurnos = ['Desayuno', 'Almuerzo', 'Cena', 'Otros'];
-    const turnosActivos = ordenTurnos.filter(t => turnosActivosSet.has(t));
-    turnosActivosSet.forEach(t => {
-      if (!turnosActivos.includes(t)) {
-        turnosActivos.push(t);
-      }
-    });
 
     // Encabezados informativos iniciales
     data.push([`CONSOLIDADO DE PRODUCTOS - PROGRAMA: ${programa.id_programa}`]);
