@@ -14,54 +14,85 @@ export default async function ProgramasPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <h1>Programas de Producción</h1>
-        <Link href="/programas/nuevo" className="btn" style={{ padding: '0.35rem 1rem', borderRadius: '4px', textDecoration: 'none', border: 'none' }}>
-          + Nuevo Programa
-        </Link>
+      {/* ── ENCABEZADO EDITORIAL ── */}
+      <div className="page-header">
+        <div className="page-header-row">
+          <div>
+            <span className="overline">Producción Diaria</span>
+            <h1>Programas de <em>Producción</em></h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.3rem' }}>
+              Turnos registrados · {programas.length} programa{programas.length !== 1 ? 's' : ''} en total
+            </p>
+          </div>
+          <Link href="/programas/nuevo" className="btn">
+            + Nuevo Programa
+          </Link>
+        </div>
       </div>
-      <p style={{ marginBottom: '1.5rem', color: '#666' }}>Listado de turnos de producción programados.</p>
 
+      {/* ── TABLA DE PROGRAMAS ── */}
       {programas.length === 0 ? (
-        <p>No hay programas de producción registrados.</p>
+        <div className="card">
+          <div className="empty-state">
+            <span className="empty-state-icon">📋</span>
+            No hay programas de producción registrados aún.
+            <div style={{ marginTop: '1rem' }}>
+              <Link href="/programas/nuevo" className="btn">Crear primer programa →</Link>
+            </div>
+          </div>
+        </div>
       ) : (
-        <table style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f3f4f6' }}>
-              <th style={{ border: '1px solid #e5e7eb', padding: '0.5rem', fontSize: '0.8rem', color: '#374151' }}>ID Programa</th>
-              <th style={{ border: '1px solid #e5e7eb', padding: '0.5rem', fontSize: '0.8rem', color: '#374151' }}>Fecha</th>
-              <th style={{ border: '1px solid #e5e7eb', padding: '0.5rem', fontSize: '0.8rem', color: '#374151' }}>Turno</th>
-              <th style={{ border: '1px solid #e5e7eb', padding: '0.5rem', fontSize: '0.8rem', color: '#374151', textAlign: 'center' }}>Cant. Recetas</th>
-              <th style={{ border: '1px solid #e5e7eb', padding: '0.5rem', fontSize: '0.8rem', color: '#374151', width: '260px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {programas.map(prog => {
-              const isCena = prog.nombre_turno.toLowerCase().includes('cena');
-              const rowBg = isCena ? '#f4ede6' : '#fbfaf7';
-              const fechaTexto = new Date(prog.fecha).toISOString().split('T')[0];
-              return (
-                <tr key={prog.id_programa} style={{ backgroundColor: rowBg }}>
-                  <td style={{ fontWeight: 600, border: '1px solid #e5e7eb', padding: '0.5rem' }}>{prog.id_programa}</td>
-                  <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem' }}>{fechaTexto}</td>
-                  <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem' }}>{prog.nombre_turno}</td>
-                  <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem', textAlign: 'center', fontWeight: 'bold', color: '#4b5563' }}>{prog.cant_recetas}</td>
-                  <td style={{ border: '1px solid #e5e7eb', padding: '0.4rem 0.5rem' }}>
-                    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
-                      <Link href={`/programas/${prog.id_programa}`} className="btn-action">
-                        📊 Consolidado
-                      </Link>
-                      <Link href={`/programas/${prog.id_programa}/editar`} className="btn-action btn-action-edit">
-                        ✏️ Editar
-                      </Link>
-                      <DeleteProgramaButton id_programa={prog.id_programa} />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Turno</th>
+                <th style={{ textAlign: 'center' }}>Recetas</th>
+                <th style={{ width: '280px' }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {programas.map(prog => {
+                const isCena = prog.nombre_turno.toLowerCase().includes('cena');
+                const fechaTexto = new Date(prog.fecha).toISOString().split('T')[0];
+                return (
+                  <tr key={prog.id_programa}>
+                    <td>
+                      <span style={{ fontWeight: 600, fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                        #{prog.id_programa}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 500 }}>{fechaTexto}</td>
+                    <td>
+                      <span className={`badge ${isCena ? 'badge-accent' : ''}`}>
+                        {prog.nombre_turno}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {prog.cant_recetas}
+                      </span>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', marginLeft: '0.2rem' }}>recetas</span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Link href={`/programas/${prog.id_programa}`} className="btn-action">
+                          📊 Consolidado
+                        </Link>
+                        <Link href={`/programas/${prog.id_programa}/editar`} className="btn-action btn-action-edit">
+                          ✏️ Editar
+                        </Link>
+                        <DeleteProgramaButton id_programa={prog.id_programa} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
