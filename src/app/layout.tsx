@@ -21,9 +21,15 @@ export default function RootLayout({
           </Link>
           <div className="header-nav">
             <Link href="/">Dashboard</Link>
-            <Link href="/recetas">Recetas</Link>
-            <Link href="/insumos">Insumos</Link>
-            <Link href="/programas">Programas</Link>
+            <Link href="/programas" style={{ color: 'var(--accent)', fontWeight: 600 }}>Programas</Link>
+            
+            <div className="nav-dropdown">
+              <span className="nav-dropdown-btn">Catálogos ▾</span>
+              <div className="nav-dropdown-content">
+                <Link href="/recetas">Recetas</Link>
+                <Link href="/insumos">Insumos</Link>
+              </div>
+            </div>
           </div>
         </nav>
 

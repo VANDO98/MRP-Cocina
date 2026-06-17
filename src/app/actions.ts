@@ -263,3 +263,13 @@ export async function updateDespachoDiario(fecha: string, id_insumo: number, can
     revalidatePath(`/programas/${d.id_programa}`);
   }
 }
+
+export async function createInsumo(nombre_insumo: string, id_categoria_insumo: number, id_unidad: number) {
+  const result = await db`
+    INSERT INTO Insumo (nombre_insumo, id_categoria_insumo, id_unidad)
+    VALUES (${nombre_insumo.trim().toUpperCase()}, ${id_categoria_insumo}, ${id_unidad})
+    RETURNING id_insumo
+  `;
+  revalidatePath('/insumos');
+  return result[0].id_insumo;
+}

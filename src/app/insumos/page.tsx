@@ -22,12 +22,15 @@ export default async function InsumosPage() {
   return (
     <div>
       {/* ── ENCABEZADO EDITORIAL ── */}
-      <div className="page-header">
-        <span className="overline">Inventario · Ingredientes</span>
-        <h1>Catálogo de <em>Insumos</em></h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.3rem' }}>
-          {insumos.length} insumo{insumos.length !== 1 ? 's' : ''} · {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
-        </p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <span className="overline">Inventario · Ingredientes</span>
+          <h1>Catálogo de <em>Insumos</em></h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.3rem' }}>
+            {insumos.length} insumo{insumos.length !== 1 ? 's' : ''} · {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <a href="/insumos/nuevo" className="btn">+ Nuevo Insumo</a>
       </div>
 
       {/* ── TABLA DE INSUMOS ── */}

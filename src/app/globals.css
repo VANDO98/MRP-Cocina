@@ -150,6 +150,57 @@ body {
   background-color: var(--accent-light);
 }
 
+/* ── Menú Dropdown en Header ── */
+.nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-dropdown-btn {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition: var(--transition);
+}
+
+.nav-dropdown:hover .nav-dropdown-btn {
+  color: var(--text-primary);
+  background-color: var(--bg-muted);
+}
+
+.nav-dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--bg-surface);
+  min-width: 150px;
+  box-shadow: 0px 8px 24px rgba(0,0,0,0.12);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  z-index: 10;
+  overflow: hidden;
+  margin-top: 0.3rem;
+}
+
+.nav-dropdown-content a {
+  display: block;
+  padding: 0.6rem 1rem;
+  border-radius: 0;
+  margin: 0;
+}
+
+.nav-dropdown-content a:hover {
+  background-color: var(--bg-muted);
+}
+
+.nav-dropdown:hover .nav-dropdown-content {
+  display: block;
+}
+
 /* ============================================
    FOOTER CON CINTA MARQUEE
    ============================================ */
