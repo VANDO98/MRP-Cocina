@@ -4,7 +4,7 @@ import { useState } from 'react';
 import DespachoInput from './DespachoInput';
 import RacionesProducidasInput from './RacionesProducidasInput';
 import DespachoDiarioInput from './DespachoDiarioInput';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 type Insumo = {
   id_insumo: number;
@@ -185,6 +185,93 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
     });
 
     const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Aplicar estilos visuales a cada celda de Excel usando xlsx-js-style
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_address = { c: C, r: R };
+        const cell_ref = XLSX.utils.encode_cell(cell_address);
+        if (!ws[cell_ref]) continue;
+
+        // Estilo básico de borde y fuente para todas las celdas del Excel
+        ws[cell_ref].s = {
+          font: { name: 'Arial', size: 9 },
+          border: {
+            top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+          }
+        };
+
+        // Fila 1: Título Principal
+        if (R === 0) {
+          ws[cell_ref].s = {
+            ...ws[cell_ref].s,
+            font: { name: 'Arial', size: 12, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '4A3B32' } }, // Marrón oscuro de la cabecera
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        }
+
+        // Fila 2: Fecha y Turno General
+        if (R === 1) {
+          ws[cell_ref].s = {
+            ...ws[cell_ref].s,
+            font: { name: 'Arial', size: 10, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '795548' } }, // Marrón de turno
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        }
+
+        // Fila 4: Encabezados de Columnas de la Tabla (R = 3)
+        if (R === 3) {
+          let bgCol = 'EAEAEA'; // Gris medio para columnas
+          let textCol = '333333';
+
+          if (C === 0) bgCol = 'D6E4D0'; // Verde grisáceo para Insumo
+          else if (C === 1) bgCol = 'C6E0B4'; // Verde para Total Consolidado
+          else if (C === 2) bgCol = 'F8CBAD'; // Naranja/Rojo suave para Total Entregado
+          else {
+            const turnoNombre = filaEncabezados[C].toUpperCase();
+            if (turnoNombre.includes('DESAYUNO')) bgCol = 'FFF2CC'; // Amarillo suave
+            else if (turnoNombre.includes('ALMUERZO')) bgCol = 'DDEBF7'; // Azul suave
+            else if (turnoNombre.includes('CENA')) bgCol = 'E1D5E7'; // Púrpura suave
+          }
+
+          ws[cell_ref].s = {
+            ...ws[cell_ref].s,
+            font: { name: 'Arial', size: 9, bold: true, color: { rgb: textCol } },
+            fill: { fgColor: { rgb: bgCol } },
+            alignment: { horizontal: C === 0 ? 'left' : 'center', vertical: 'center' }
+          };
+        }
+
+        // Filas de Datos (R >= 4)
+        if (R >= 4) {
+          ws[cell_ref].s.alignment = {
+            horizontal: C === 0 ? 'left' : 'right',
+            vertical: 'center'
+          };
+
+          // Nombre de Insumo en negrita
+          if (C === 0) {
+            ws[cell_ref].s.font.bold = true;
+          }
+          // Columna de Total Consolidado con fondo verde muy sutil
+          if (C === 1) {
+            ws[cell_ref].s.fill = { fgColor: { rgb: 'F2F7F2' } };
+            ws[cell_ref].s.font.bold = true;
+          }
+          // Columna de Total Entregado con fondo rojo muy sutil
+          if (C === 2) {
+            ws[cell_ref].s.fill = { fgColor: { rgb: 'FFF6F6' } };
+            ws[cell_ref].s.font.bold = true;
+          }
+        }
+      }
+    }
 
     // Dar anchos automáticos y holgados a las columnas de Excel
     const wscols = [
