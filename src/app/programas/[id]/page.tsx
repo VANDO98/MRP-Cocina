@@ -132,8 +132,9 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
   const despachosDiarios = Object.values(mapaDiario);
 
   const programaMod = {
-    ...programa,
-    fecha: fechaFormateada
+    id_programa: programa.id_programa as string,
+    fecha: fechaFormateada,
+    nombre_turno: programa.nombre_turno as string
   };
 
   return (

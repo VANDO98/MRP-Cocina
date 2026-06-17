@@ -43,8 +43,9 @@ export default async function EditarProgramaPage({ params }: { params: Promise<{
   `;
 
   const programaMod = {
-    ...programa,
-    fecha: fechaFormateada
+    id_programa: programa.id_programa as string,
+    fecha: fechaFormateada,
+    nombre_turno: programa.nombre_turno as string
   };
 
   return (
