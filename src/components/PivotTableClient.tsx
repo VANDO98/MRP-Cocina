@@ -255,19 +255,13 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
             vertical: 'center'
           };
 
-          // Nombre de Insumo en negrita
-          if (C === 0) {
-            ws[cell_ref].s.font.bold = true;
-          }
           // Columna de Total Consolidado con fondo verde muy sutil
           if (C === 1) {
             ws[cell_ref].s.fill = { fgColor: { rgb: 'F2F7F2' } };
-            ws[cell_ref].s.font.bold = true;
           }
           // Columna de Total Entregado con fondo rojo muy sutil
           if (C === 2) {
             ws[cell_ref].s.fill = { fgColor: { rgb: 'FFF6F6' } };
-            ws[cell_ref].s.font.bold = true;
           }
         }
       }
