@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate-to-postgres": "node scripts/migrate-to-postgres.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "next": "16.2.9",
+    "postgres": "^3.4.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "xlsx": "^0.18.5"
