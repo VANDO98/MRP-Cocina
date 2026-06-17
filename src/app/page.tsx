@@ -1,14 +1,19 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
 
-export default function Dashboard() {
-  // Contadores Básicos
-  const recetasCount = db.prepare('SELECT COUNT(*) as count FROM Receta').get() as { count: number };
-  const insumosCount = db.prepare('SELECT COUNT(*) as count FROM Insumo').get() as { count: number };
-  const programasCount = db.prepare('SELECT COUNT(*) as count FROM Programa_Produccion').get() as { count: number };
+export default async function Dashboard() {
+  // Contadores Básicos (en Postgres con count(*) se devuelve como string o bigint, por lo que convertimos a Number)
+  const recetasQuery = await db`SELECT COUNT(*) as count FROM Receta`;
+  const recetasCount = Number(recetasQuery[0]?.count || 0);
+
+  const insumosQuery = await db`SELECT COUNT(*) as count FROM Insumo`;
+  const insumosCount = Number(insumosQuery[0]?.count || 0);
+
+  const programasQuery = await db`SELECT COUNT(*) as count FROM Programa_Produccion`;
+  const programasCount = Number(programasQuery[0]?.count || 0);
 
   // 1. Asertividad de la Programación (Estimado vs Real)
-  const programasRaciones = db.prepare(`
+  const programasRaciones = await db`
     SELECT 
       p.id_programa,
       p.fecha,
@@ -18,24 +23,24 @@ export default function Dashboard() {
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
     LEFT JOIN Programa_Detalle pd ON p.id_programa = pd.id_programa
-    GROUP BY p.id_programa
+    GROUP BY p.id_programa, p.fecha, t.nombre_turno, t.id_turno
     ORDER BY p.fecha DESC, t.id_turno ASC
     LIMIT 5
-  `).all() as any[];
+  `;
 
   // Calcular cumplimiento global promedio
   let totalProgramadasGlobal = 0;
   let totalProducidasGlobal = 0;
   programasRaciones.forEach(p => {
-    totalProgramadasGlobal += p.raciones_programadas;
-    totalProducidasGlobal += p.raciones_producidas;
+    totalProgramadasGlobal += Number(p.raciones_programadas);
+    totalProducidasGlobal += Number(p.raciones_producidas);
   });
   const asertividadGlobal = totalProgramadasGlobal > 0 
     ? (totalProducidasGlobal / totalProgramadasGlobal) * 100 
     : 0;
 
   // 2. Eficiencia de Consumo por Turno
-  const consumosPorTurno = db.prepare(`
+  const consumosPorTurno = await db`
     SELECT 
       t.nombre_turno,
       SUM(dc.cantidad_teorica_calculada) as total_teorico,
@@ -43,11 +48,11 @@ export default function Dashboard() {
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
     JOIN Despacho_Consolidado dc ON p.id_programa = dc.id_programa
-    GROUP BY t.id_turno
-  `).all() as any[];
+    GROUP BY t.nombre_turno, t.id_turno
+  `;
 
   // 3. Desviaciones de Ratios (Rendimiento de Recetas)
-  const datosRatios = db.prepare(`
+  const datosRatios = await db`
     SELECT 
       pd.id_receta,
       r.nombre_receta,
@@ -66,7 +71,7 @@ export default function Dashboard() {
     JOIN Insumo i ON rd.id_insumo = i.id_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
     JOIN Despacho_Consolidado dc ON p.id_programa = dc.id_programa AND rd.id_insumo = dc.id_insumo
-  `).all() as any[];
+  `;
 
   // Agrupar y calcular desviación ponderada por Receta + Insumo
   const mapaRatios: Record<string, {
@@ -81,8 +86,14 @@ export default function Dashboard() {
   datosRatios.forEach(d => {
     const key = `${d.id_receta}-${d.id_insumo}`;
     
-    const cantidadRequerida = d.ratio_teorico * d.raciones_programadas;
-    const factor = d.total_teorico_insumo > 0 ? (d.total_real_insumo / d.total_teorico_insumo) : 0;
+    const ratioTeoricoNum = Number(d.ratio_teorico);
+    const racionesProgNum = Number(d.raciones_programadas);
+    const racionesProdNum = Number(d.raciones_producidas);
+    const totalTeoInsumoNum = Number(d.total_teorico_insumo);
+    const totalRealInsumoNum = Number(d.total_real_insumo);
+
+    const cantidadRequerida = ratioTeoricoNum * racionesProgNum;
+    const factor = totalTeoInsumoNum > 0 ? (totalRealInsumoNum / totalTeoInsumoNum) : 0;
     const entregadoProporcional = cantidadRequerida * factor;
 
     if (!mapaRatios[key]) {
@@ -90,13 +101,13 @@ export default function Dashboard() {
         nombre_receta: d.nombre_receta,
         nombre_insumo: d.nombre_insumo,
         unidad: d.unidad || '-',
-        ratio_teorico: d.ratio_teorico,
+        ratio_teorico: ratioTeoricoNum,
         suma_proporcional: 0,
         suma_producida: 0
       };
     }
     mapaRatios[key].suma_proporcional += entregadoProporcional;
-    mapaRatios[key].suma_producida += d.raciones_producidas;
+    mapaRatios[key].suma_producida += racionesProdNum;
   });
 
   // Convertir a array y calcular porcentaje de desviación
@@ -110,10 +121,9 @@ export default function Dashboard() {
         desviacion
       };
     })
-    // Filtrar desvíos significativos (por ejemplo, > 0.1% o < -0.1%)
     .filter(m => Math.abs(m.desviacion) > 0.1)
-    .sort((a, b) => b.desviacion - a.desviacion) // Ordenar de mayor desviación a menor
-    .slice(0, 5); // Mostrar los top 5 críticos
+    .sort((a, b) => b.desviacion - a.desviacion)
+    .slice(0, 5);
 
   return (
     <div>
@@ -138,25 +148,25 @@ export default function Dashboard() {
         <div className="card">
           <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#666', textTransform: 'uppercase' }}>Programas Activos</h3>
           <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0.5rem 0 0.2rem 0', color: 'var(--primary-color)' }}>
-            {programasCount.count}
+            {programasCount}
           </p>
           <span style={{ fontSize: '0.8rem', color: '#888' }}>Turnos registrados en histórico</span>
           <div style={{ marginTop: '1.2rem' }}>
-            <Link href="/programas" className="btn" style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}>Ver Programas</Link>
+            <Link href="/programas" className="btn" style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem', textDecoration: 'none' }}>Ver Programas</Link>
           </div>
         </div>
 
         <div className="card">
           <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#666', textTransform: 'uppercase' }}>Entidades</h3>
           <p style={{ fontSize: '1.2rem', fontWeight: '600', margin: '0.5rem 0 0 0' }}>
-            📖 Recetas: <span style={{ color: 'var(--primary-color)' }}>{recetasCount.count}</span>
+            📖 Recetas: <span style={{ color: 'var(--primary-color)' }}>{recetasCount}</span>
           </p>
           <p style={{ fontSize: '1.2rem', fontWeight: '600', margin: '0.2rem 0 0 0' }}>
-            🧅 Insumos: <span style={{ color: 'var(--primary-color)' }}>{insumosCount.count}</span>
+            🧅 Insumos: <span style={{ color: 'var(--primary-color)' }}>{insumosCount}</span>
           </p>
           <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem' }}>
-            <Link href="/recetas" className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Recetas</Link>
-            <Link href="/insumos" className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Insumos</Link>
+            <Link href="/recetas" className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none' }}>Recetas</Link>
+            <Link href="/insumos" className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none' }}>Insumos</Link>
           </div>
         </div>
       </div>
@@ -180,13 +190,15 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {consumosPorTurno.map((ct, idx) => {
-                const desv = ct.total_teorico > 0 ? ((ct.total_real - ct.total_teorico) / ct.total_teorico) * 100 : 0;
+                const totalTeo = Number(ct.total_teorico);
+                const totalReal = Number(ct.total_real);
+                const desv = totalTeo > 0 ? ((totalReal - totalTeo) / totalTeo) * 100 : 0;
                 const isOver = desv > 0;
                 return (
                   <tr key={idx} style={{ borderBottom: '1px solid #f9f9f9' }}>
                     <td style={{ padding: '0.6rem 0', fontWeight: 'bold' }}>{ct.nombre_turno}</td>
-                    <td style={{ textAlign: 'right', padding: '0.6rem' }}>{ct.total_teorico.toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', padding: '0.6rem' }}>{ct.total_real.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', padding: '0.6rem' }}>{totalTeo.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', padding: '0.6rem' }}>{totalReal.toFixed(2)}</td>
                     <td style={{ textAlign: 'right', padding: '0.6rem 0', fontWeight: 'bold', color: isOver ? '#c62828' : '#2e7d32' }}>
                       {isOver ? '+' : ''}{desv.toFixed(1)}%
                     </td>
@@ -221,16 +233,18 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {programasRaciones.map((pr, idx) => {
-                const cumpl = pr.raciones_programadas > 0 ? (pr.raciones_producidas / pr.raciones_programadas) * 100 : 0;
+                const progNum = Number(pr.raciones_programadas);
+                const prodNum = Number(pr.raciones_producidas);
+                const cumpl = progNum > 0 ? (prodNum / progNum) * 100 : 0;
                 return (
                   <tr key={idx} style={{ borderBottom: '1px solid #f9f9f9' }}>
                     <td style={{ padding: '0.6rem 0' }}>
                       <Link href={`/programas/${pr.id_programa}`} style={{ color: 'var(--primary-color)', fontWeight: 600, textDecoration: 'none' }}>
-                        {pr.fecha} - {pr.nombre_turno}
+                        {new Date(pr.fecha).toISOString().split('T')[0]} - {pr.nombre_turno}
                       </Link>
                     </td>
-                    <td style={{ textAlign: 'center', padding: '0.6rem', color: '#666' }}>{pr.raciones_programadas}</td>
-                    <td style={{ textAlign: 'center', padding: '0.6rem', fontWeight: 'bold' }}>{pr.raciones_producidas}</td>
+                    <td style={{ textAlign: 'center', padding: '0.6rem', color: '#666' }}>{progNum}</td>
+                    <td style={{ textAlign: 'center', padding: '0.6rem', fontWeight: 'bold' }}>{prodNum}</td>
                     <td style={{ textAlign: 'right', padding: '0.6rem 0', fontWeight: 'bold', color: cumpl >= 95 ? '#2e7d32' : '#d97706' }}>
                       {cumpl.toFixed(1)}%
                     </td>

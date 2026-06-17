@@ -2,15 +2,15 @@ import { db } from '@/lib/db';
 import Link from 'next/link';
 import DeleteProgramaButton from '@/components/DeleteProgramaButton';
 
-export default function ProgramasPage() {
-  const programas = db.prepare(`
+export default async function ProgramasPage() {
+  const programas = await db`
     SELECT p.id_programa, p.fecha, t.nombre_turno, COUNT(pd.id_receta) as cant_recetas
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
     LEFT JOIN Programa_Detalle pd ON p.id_programa = pd.id_programa
-    GROUP BY p.id_programa
+    GROUP BY p.id_programa, p.fecha, t.nombre_turno, t.id_turno
     ORDER BY p.fecha DESC, t.id_turno ASC
-  `).all() as any[];
+  `;
 
   return (
     <div>
@@ -39,10 +39,11 @@ export default function ProgramasPage() {
             {programas.map(prog => {
               const isCena = prog.nombre_turno.toLowerCase().includes('cena');
               const rowBg = isCena ? '#f4ede6' : '#fbfaf7';
+              const fechaTexto = new Date(prog.fecha).toISOString().split('T')[0];
               return (
                 <tr key={prog.id_programa} style={{ backgroundColor: rowBg }}>
                   <td style={{ fontWeight: 600, border: '1px solid #e5e7eb', padding: '0.5rem' }}>{prog.id_programa}</td>
-                  <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem' }}>{prog.fecha}</td>
+                  <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem' }}>{fechaTexto}</td>
                   <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem' }}>{prog.nombre_turno}</td>
                   <td style={{ border: '1px solid #e5e7eb', padding: '0.5rem', textAlign: 'center', fontWeight: 'bold', color: '#4b5563' }}>{prog.cant_recetas}</td>
                   <td style={{ border: '1px solid #e5e7eb', padding: '0.4rem 0.5rem' }}>

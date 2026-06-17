@@ -7,30 +7,45 @@ export default async function EditarProgramaPage({ params }: { params: Promise<{
   const { id } = await params;
 
   // Consultar programa
-  const programa = db.prepare(`
+  const programas = await db`
     SELECT p.id_programa, p.fecha, t.nombre_turno
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
-    WHERE p.id_programa = ?
-  `).get(id) as any;
+    WHERE p.id_programa = ${id}
+  `;
+  const programa = programas[0];
 
   if (!programa) notFound();
 
+  const fechaFormateada = new Date(programa.fecha).toISOString().split('T')[0];
+
   // Consultar recetas actuales del programa
-  const recetasActuales = db.prepare(`
+  const recetasActuales = await db`
     SELECT pd.id_receta, r.nombre_receta, pd.raciones_programadas
     FROM Programa_Detalle pd
     JOIN Receta r ON pd.id_receta = r.id_receta
-    WHERE pd.id_programa = ?
+    WHERE pd.id_programa = ${id}
     ORDER BY r.nombre_receta ASC
-  `).all(id) as any[];
+  `;
+
+  // Mapear recetas actuales
+  const recetasMapped = recetasActuales.map(r => ({
+    id_receta: r.id_receta,
+    nombre_receta: r.nombre_receta,
+    raciones_programadas: Number(r.raciones_programadas)
+  }));
 
   // Consultar catálogo completo de recetas
-  const catalogoRecetas = db.prepare(`
+  const catalogoRecetas = await db`
     SELECT id_receta, nombre_receta
     FROM Receta
     ORDER BY nombre_receta ASC
-  `).all() as any[];
+  `;
+
+  const programaMod = {
+    ...programa,
+    fecha: fechaFormateada
+  };
 
   return (
     <div>
@@ -42,9 +57,9 @@ export default async function EditarProgramaPage({ params }: { params: Promise<{
       <p style={{ color: '#666' }}>Modifica los platos programados o ajusta las raciones para este turno.</p>
 
       <ProgramaEditarForm 
-        programa={programa} 
-        recetasActuales={recetasActuales} 
-        catalogoRecetas={catalogoRecetas} 
+        programa={programaMod} 
+        recetasActuales={recetasMapped} 
+        catalogoRecetas={catalogoRecetas as any} 
       />
     </div>
   );

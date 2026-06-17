@@ -1,9 +1,9 @@
 import ExcelPasteForm from '@/components/ExcelPasteForm';
 import { db } from '@/lib/db';
 
-export default function NuevoProgramaPage() {
-  const turnos = db.prepare('SELECT id_turno, nombre_turno FROM Turno').all() as any[];
-  const recetas = db.prepare('SELECT id_receta, nombre_receta FROM Receta').all() as any[];
+export default async function NuevoProgramaPage() {
+  const turnos = await db`SELECT id_turno, nombre_turno FROM Turno`;
+  const recetas = await db`SELECT id_receta, nombre_receta FROM Receta`;
 
   return (
     <div>
@@ -11,7 +11,7 @@ export default function NuevoProgramaPage() {
       <p style={{ marginBottom: '2rem' }}>Selecciona la fecha, el turno y pega desde Excel las recetas y sus raciones.</p>
       
       <div className="card">
-        <ExcelPasteForm turnos={turnos} recetas={recetas} />
+        <ExcelPasteForm turnos={turnos as any} recetas={recetas as any} />
       </div>
     </div>
   );
