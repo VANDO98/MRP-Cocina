@@ -576,29 +576,23 @@ input.raciones-input {
 }
 
 /* ============================================
-   IMPRESIÓN A PDF
+   IMPRESIÓN A PDF — preservado exacto
    ============================================ */
 @media print {
   @page {
-    /* Márgenes cómodos: 1.5cm laterales, 1.2cm arriba/abajo */
-    margin: 1.2cm 1.5cm;
-    /* Landscape automático para tablas anchas del consolidado */
-    size: A4 landscape;
+    margin: 0.4cm;
   }
 
   .no-print {
     display: none !important;
   }
 
-  html, body {
-    background-color: white !important;
-    font-size: 9px;
+  body {
+    background-color: white;
+    font-size: 8px;
     padding: 0 !important;
     margin: 0 !important;
-    color: #000 !important;
-    /* Preservar colores de fondo (cabeceras de turno, etc.) */
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #000;
   }
 
   .container {
@@ -610,50 +604,31 @@ input.raciones-input {
   .card {
     border: none;
     padding: 0 !important;
-    margin-bottom: 0.3rem !important;
+    margin-bottom: 0.2rem !important;
     box-shadow: none !important;
     border-radius: 0 !important;
   }
 
   h1 {
-    font-size: 1.1rem !important;
-    margin-bottom: 0.2rem !important;
-  }
-
-  h2 {
-    font-size: 0.9rem !important;
-    margin-bottom: 0.15rem !important;
+    font-size: 1rem !important;
+    margin-bottom: 0.05rem !important;
   }
 
   p {
     margin-bottom: 0.1rem !important;
-    font-size: 8px !important;
+    font-size: 7.5px !important;
   }
 
   table {
-    font-size: 8.5px !important;
+    font-size: 8px !important;
     width: 100% !important;
+    min-width: 100% !important;
     border-collapse: collapse !important;
   }
 
   th, td {
-    /* Más holgura que antes (era 1px 2px) */
-    padding: 2px 5px !important;
-    border: 1px solid #bbb !important;
-  }
-
-  th {
-    background-color: #eeeeee !important;
-  }
-
-  /* Evitar cortes de página en medio de una fila */
-  tr {
-    page-break-inside: avoid;
-  }
-
-  /* Botones e inputs ocultos / neutralizados */
-  button, .btn, .btn-action, .btn-outline, .btn-accent-sm {
-    display: none !important;
+    padding: 1px 2px !important;
+    border: 1px solid #999 !important;
   }
 
   input, input.despacho-input, input.raciones-input {
@@ -662,11 +637,10 @@ input.raciones-input {
     padding: 0 !important;
     margin: 0 !important;
     font-weight: normal !important;
-    font-size: 8.5px !important;
+    font-size: 8px !important;
     text-align: center !important;
     width: 100% !important;
     box-shadow: none !important;
     color: #000 !important;
   }
 }
-
