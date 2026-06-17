@@ -56,6 +56,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
   const [mostrarProteinas, setMostrarProteinas] = useState(true);
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
   const [vista, setVista] = useState<'pivot' | 'diario' | 'consumo' | 'raciones'>('pivot');
+  const [mostrarDetalleRecetas, setMostrarDetalleRecetas] = useState(false);
 
   // Clasificar recetas por turno lógico
   const recetasConTurno = recetasProgramadas.map(rp => ({
@@ -387,6 +388,20 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
               />
               Abarrotes, Lácteos, etc.
             </label>
+            {vista === 'pivot' && (
+              <>
+                <span style={{ margin: '0 0.5rem', color: '#ccc' }}>|</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', userSelect: 'none', fontSize: '0.85rem', color: '#333' }}>
+                  <input
+                    type="checkbox"
+                    checked={mostrarDetalleRecetas}
+                    onChange={e => setMostrarDetalleRecetas(e.target.checked)}
+                    style={{ accentColor: 'var(--primary-color)' }}
+                  />
+                  Ver desglose por recetas (platos)
+                </label>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
@@ -415,20 +430,49 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
           <div style={{ overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%' }}>
               <thead>
-                <tr>
-                  <th style={{ backgroundColor: '#eee', color: '#333', fontSize: '0.8rem', border: '1px solid #ddd' }}>INSUMO (UNIDAD)</th>
-                  <th style={{ backgroundColor: '#f1f8f3', color: '#2e7d32', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '150px' }}>TOTAL CONSOLIDADO</th>
-                  <th style={{ backgroundColor: '#fff5f5', color: '#c62828', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '150px' }}>TOTAL ENTREGADO</th>
-                  {turnosActivos.map(t => (
-                    <th key={t} style={{ backgroundColor: '#eee', color: '#333', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '120px' }}>
-                      {t.toUpperCase()}
-                    </th>
-                  ))}
-                </tr>
+                {mostrarDetalleRecetas ? (
+                  // Cabecera detallada por recetas individuales
+                  <>
+                    {/* Fila: Estimado de Raciones */}
+                    <tr className="no-print">
+                      <th></th>
+                      <th style={{ backgroundColor: '#f1f8f3', color: '#2e7d32', textAlign: 'center', fontSize: '0.75rem', fontWeight: 'bold', border: '1px solid #ddd' }}>RACIONES EST.:</th>
+                      <th style={{ backgroundColor: '#fffcf7', color: '#4e3629', textAlign: 'center', border: '1px solid #ddd' }}></th>
+                      {recetasProgramadas.map(rp => (
+                        <th key={rp.id_receta} style={{ backgroundColor: '#f5f5f5', color: '#444', textAlign: 'center', fontWeight: 'normal', fontSize: '0.8rem', border: '1px solid #ddd' }}>
+                          {rp.raciones_programadas}
+                        </th>
+                      ))}
+                    </tr>
+                    {/* Fila de Nombres de Columnas */}
+                    <tr>
+                      <th style={{ backgroundColor: '#eee', color: '#333', fontSize: '0.8rem', border: '1px solid #ddd' }}>INSUMO (UNIDAD)</th>
+                      <th style={{ backgroundColor: '#f1f8f3', color: '#2e7d32', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '130px' }}>TOTAL CONSOLIDADO</th>
+                      <th style={{ backgroundColor: '#fff5f5', color: '#c62828', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '130px' }}>TOTAL ENTREGADO</th>
+                      {recetasProgramadas.map(rp => (
+                        <th key={rp.id_receta} style={{ backgroundColor: '#eee', color: '#333', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={rp.nombre_receta}>
+                          {rp.nombre_receta}
+                        </th>
+                      ))}
+                    </tr>
+                  </>
+                ) : (
+                  // Cabecera compacta por turnos unificados
+                  <tr>
+                    <th style={{ backgroundColor: '#eee', color: '#333', fontSize: '0.8rem', border: '1px solid #ddd' }}>INSUMO (UNIDAD)</th>
+                    <th style={{ backgroundColor: '#f1f8f3', color: '#2e7d32', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '150px' }}>TOTAL CONSOLIDADO</th>
+                    <th style={{ backgroundColor: '#fff5f5', color: '#c62828', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '150px' }}>TOTAL ENTREGADO</th>
+                    {turnosActivos.map(t => (
+                      <th key={t} style={{ backgroundColor: '#eee', color: '#333', textAlign: 'center', fontSize: '0.8rem', border: '1px solid #ddd', width: '120px' }}>
+                        {t.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {filteredInsumos.map(insumo => {
-                  // Calcular cantidades por turno para este insumo
+                  // Calcular cantidades por turno para este insumo (usado si mostrarDetalleRecetas es false)
                   const cantidadesPorTurno: Record<string, number> = {};
                   turnosActivos.forEach(t => {
                     cantidadesPorTurno[t] = 0;
@@ -450,20 +494,33 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
                       <td style={{ padding: '0.15rem 0.3rem', border: '1px solid #ddd' }}>
                         <DespachoInput id_programa={programa.id_programa} id_insumo={insumo.id_insumo} valorInicial={insumo.total_real} />
                       </td>
-                      {turnosActivos.map(t => {
-                        const valor = cantidadesPorTurno[t];
-                        return (
-                          <td key={t} style={{ textAlign: 'center', color: '#555', border: '1px solid #eee', fontSize: '0.8rem', padding: '0.3rem' }}>
-                            {valor > 0 ? valor.toFixed(4).replace(/\.?0+$/, '') : ''}
-                          </td>
-                        );
-                      })}
+                      {mostrarDetalleRecetas ? (
+                        // Render de recetas individuales
+                        recetasProgramadas.map(rp => {
+                          const valor = mapCruces[insumo.id_insumo]?.[rp.id_receta];
+                          return (
+                            <td key={rp.id_receta} style={{ textAlign: 'center', color: '#888', border: '1px solid #eee', fontSize: '0.8rem', padding: '0.3rem' }}>
+                              {valor ? valor.toFixed(4).replace(/\.?0+$/, '') : ''}
+                            </td>
+                          );
+                        })
+                      ) : (
+                        // Render de turnos lógicos unificados
+                        turnosActivos.map(t => {
+                          const valor = cantidadesPorTurno[t];
+                          return (
+                            <td key={t} style={{ textAlign: 'center', color: '#555', border: '1px solid #eee', fontSize: '0.8rem', padding: '0.3rem' }}>
+                              {valor > 0 ? valor.toFixed(4).replace(/\.?0+$/, '') : ''}
+                            </td>
+                          );
+                        })
+                      )}
                     </tr>
                   );
                 })}
                 {filteredInsumos.length === 0 && (
                   <tr>
-                    <td colSpan={turnosActivos.length + 3} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={mostrarDetalleRecetas ? recetasProgramadas.length + 3 : turnosActivos.length + 3} style={{ textAlign: 'center', padding: '2rem' }}>
                       No hay insumos en esta categoría.
                     </td>
                   </tr>
