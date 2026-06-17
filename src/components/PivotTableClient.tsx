@@ -55,7 +55,7 @@ const getTurnoLogico = (nombreReceta: string): string => {
 export default function PivotTableClient({ programa, recetasProgramadas, insumos, mapCruces, despachosDiarios }: Props) {
   const [mostrarProteinas, setMostrarProteinas] = useState(true);
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
-  const [vista, setVista] = useState<'pivot' | 'consumo' | 'diario'>('pivot');
+  const [vista, setVista] = useState<'pivot' | 'diario' | 'consumo' | 'raciones'>('pivot');
 
   // Clasificar recetas por turno lógico
   const recetasConTurno = recetasProgramadas.map(rp => ({
@@ -262,11 +262,30 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
         >
           📋 Cálculo de Consumo (Plano para Excel)
         </button>
+        <button 
+          onClick={() => setVista('raciones')} 
+          style={{ 
+            padding: '0.5rem 1.2rem', 
+            cursor: 'pointer', 
+            border: '1px solid #ddd',
+            borderBottom: vista === 'raciones' ? '2px solid var(--primary-color)' : '1px solid transparent',
+            background: vista === 'raciones' ? '#fff' : '#f9f9f9', 
+            color: vista === 'raciones' ? 'var(--primary-color)' : '#666',
+            fontWeight: 'bold',
+            fontSize: '0.9rem',
+            borderTopLeftRadius: '4px',
+            borderTopRightRadius: '4px',
+            position: 'relative',
+            bottom: '-1px'
+          }}
+        >
+          📝 Registrar Real Producido
+        </button>
       </div>
 
       {/* Controles de filtros e impresion mas limpios */}
       <div className="no-print" style={{ marginBottom: '1.2rem', padding: '0.6rem 0.8rem', backgroundColor: '#fcfbfa', border: '1px solid #e8e6e3', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {vista !== 'diario' ? (
+        {vista !== 'diario' && vista !== 'raciones' ? (
           <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
             <span style={{ fontWeight: 600, color: '#4e3629', fontSize: '0.85rem' }}>FILTRAR INSUMOS:</span>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', userSelect: 'none', fontSize: '0.85rem', color: '#333' }}>
@@ -312,28 +331,6 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
 
       {vista === 'pivot' && (
         <>
-          {/* Registro de raciones producidas arriba de forma compacta */}
-          <div className="no-print" style={{ marginBottom: '1.2rem', padding: '0.6rem 0.8rem', backgroundColor: '#fdfbf7', border: '1px solid #e2d9cd' }}>
-            <h3 style={{ fontSize: '0.85rem', marginBottom: '0.4rem', color: 'var(--secondary-color)', fontWeight: 600 }}>
-              🥦 RACIONES REALES PRODUCIDAS DE LAS RECETAS:
-            </h3>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {recetasProgramadas.map(rp => (
-                <div key={rp.id_receta} style={{ border: '1px solid #ddd', padding: '0.25rem 0.4rem', backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
-                  <span style={{ fontWeight: 500 }}>{rp.nombre_receta}</span>
-                  <span style={{ color: '#666', fontSize: '0.75rem' }}>({rp.raciones_programadas} Est.)</span>
-                  <span style={{ margin: '0 0.2rem', color: '#ccc' }}>|</span>
-                  <RacionesProducidasInput 
-                    id_programa={programa.id_programa}
-                    id_receta={rp.id_receta}
-                    racionesProgramadas={rp.raciones_programadas}
-                    valorInicial={rp.raciones_producidas}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div style={{ overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%' }}>
               <thead>
@@ -488,6 +485,42 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
                   </td>
                 </tr>
               )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {vista === 'raciones' && (
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem', backgroundColor: '#fff', border: '1px solid #ddd' }}>
+          <h2 style={{ fontSize: '1.05rem', marginBottom: '0.5rem', color: 'var(--secondary-color)', fontWeight: 600 }}>
+            📝 REGISTRO DE RACIONES REALES PRODUCIDAS
+          </h2>
+          <p style={{ color: '#666', marginBottom: '1rem', fontSize: '0.8rem' }}>
+            Ingresa la cantidad de raciones reales que la cocina llegó a preparar para cada plato en este turno.
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f2f2f2' }}>
+                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'left' }}>RECETA</th>
+                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'center', width: '150px' }}>RACIONES ESTIMADAS</th>
+                <th style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontSize: '0.8rem', textAlign: 'center', width: '150px' }}>REAL PRODUCIDO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recetasProgramadas.map(rp => (
+                <tr key={rp.id_receta}>
+                  <td style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', fontWeight: 600, fontSize: '0.85rem' }}>{rp.nombre_receta}</td>
+                  <td style={{ padding: '0.35rem 0.5rem', border: '1px solid #ddd', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>{rp.raciones_programadas}</td>
+                  <td style={{ padding: '0.2rem', border: '1px solid #ddd', textAlign: 'center' }}>
+                    <RacionesProducidasInput 
+                      id_programa={programa.id_programa}
+                      id_receta={rp.id_receta}
+                      racionesProgramadas={rp.raciones_programadas}
+                      valorInicial={rp.raciones_producidas}
+                    />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
