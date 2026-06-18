@@ -277,7 +277,7 @@ export default async function Dashboard() {
       </div>
 
       {/* ── ALERTAS DE VARIACIÓN DE RATIOS ── */}
-      <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
+      <div className="card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
         <span className="overline">Control de Calidad</span>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '0.4rem' }}>Alertas de <em>Variación</em> de Ratios</h2>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
@@ -328,6 +328,28 @@ export default async function Dashboard() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ── SEGURIDAD DE DATOS ── */}
+      <div className="card" style={{ padding: '1.25rem 1.5rem', border: '1px solid #fed7aa', backgroundColor: '#fffcf5' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <span className="overline" style={{ color: '#c2410c' }}>Seguridad</span>
+            <h2 style={{ fontSize: '1.1rem', marginBottom: '0.4rem', color: '#9a3412' }}>Copia de <em>Seguridad</em></h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, maxWidth: '600px' }}>
+              Descarga un respaldo completo (JSON) con todas las recetas, insumos, programas y despachos registrados en el sistema hasta este instante. Guarda este archivo en tu disco local o Drive.
+            </p>
+          </div>
+          <a 
+            href="/api/backup" 
+            target="_blank"
+            download
+            className="btn" 
+            style={{ backgroundColor: '#c2410c', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>📥</span> Descargar Base de Datos
+          </a>
         </div>
       </div>
     </div>
