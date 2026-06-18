@@ -102,20 +102,10 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
   
   // Ordenar alfabéticamente dentro de cada categoría y contar totales
   let totalInsumos = 0;
-  let totalTeoricoG = 0;
-  let totalRealG = 0;
-  const totalTurnosG: Record<string, number> = {};
 
   categoriasOrdenadas.forEach(c => {
     agrupadoPorCategoria[c].sort((a, b) => a.nombre_insumo.localeCompare(b.nombre_insumo));
     totalInsumos += agrupadoPorCategoria[c].length;
-    agrupadoPorCategoria[c].forEach(f => {
-      totalTeoricoG += f.total_teorico;
-      totalRealG += f.total_real;
-      Object.entries(f.por_turno).forEach(([t, v]) => {
-        totalTurnosG[t] = (totalTurnosG[t] ?? 0) + v;
-      });
-    });
   });
 
   // Nombres de turnos (columnas dinámicas)
@@ -276,22 +266,6 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
                 })}
               </React.Fragment>
             ))}
-
-            {/* TOTALES */}
-            <tr style={{ background: '#1a1a2e', color: '#fff', fontWeight: 700 }}>
-              <td style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>TOTAL GENERAL</td>
-              <td style={{ textAlign: 'center', fontSize: '11px', color: 'var(--accent)' }}>
-                {totalTeoricoG.toFixed(2)}
-              </td>
-              <td style={{ textAlign: 'center', fontSize: '11px', color: '#6ee7b7' }}>
-                {totalRealG.toFixed(2)}
-              </td>
-              {nombresTurnos.map(turno => (
-                <td key={turno} style={{ textAlign: 'center', fontSize: '11px', color: '#fed7aa' }}>
-                  {(totalTurnosG[turno] ?? 0).toFixed(2)}
-                </td>
-              ))}
-            </tr>
           </tbody>
         </table>
       </div>
