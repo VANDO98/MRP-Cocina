@@ -46,7 +46,7 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
     JOIN Insumo i       ON dc.id_insumo  = i.id_insumo
     LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
-    WHERE dc.id_programa = ANY(${ids})
+    WHERE dc.id_programa = ANY(${ids}) AND i.id_categoria_insumo IN (3, 4, 10)
     ORDER BY c.nombre_categoria ASC, i.nombre_insumo ASC
   `;
 

@@ -67,8 +67,8 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
   const turnosActivos = [programa.nombre_turno];
 
   const filteredInsumos = insumos.filter(i => {
-    const isProteinaVerdura = [2, 3, 4, 10].includes(i.id_categoria_insumo);
-    if (isProteinaVerdura) return mostrarProteinas;
+    const isProteina = [3, 4, 10].includes(i.id_categoria_insumo);
+    if (isProteina) return mostrarProteinas;
     return mostrarAbarrotes;
   });
 
@@ -399,7 +399,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
                 onChange={e => setMostrarProteinas(e.target.checked)}
                 style={{ accentColor: 'var(--primary-color)' }}
               />
-              Proteínas y Verduras
+              Proteínas
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', userSelect: 'none', fontSize: '0.85rem', color: '#333' }}>
               <input
@@ -427,7 +427,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
-            <span style={{ fontWeight: 600, color: '#2e7d32', fontSize: '0.85rem' }}>Consolidado de Proteínas y Verduras de la fecha: {programa.fecha}</span>
+            <span style={{ fontWeight: 600, color: '#2e7d32', fontSize: '0.85rem' }}>Consolidado de Proteínas de la fecha: {programa.fecha}</span>
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -621,7 +621,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
               {despachosDiarios.length === 0 && (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                    No hay insumos de proteínas o verduras registrados para los programas de esta fecha.
+                    No hay insumos de proteínas registrados para los programas de esta fecha.
                   </td>
                 </tr>
               )}

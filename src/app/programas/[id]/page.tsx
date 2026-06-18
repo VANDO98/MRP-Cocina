@@ -122,7 +122,7 @@ export default async function ProgramaPivotPage({ params }: { params: Promise<{ 
     LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
     LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
     JOIN Programa_Produccion p ON dc.id_programa = p.id_programa
-    WHERE p.fecha = ${fechaFormateada} AND i.id_categoria_insumo IN (2, 3, 4, 10)
+    WHERE p.fecha = ${fechaFormateada} AND i.id_categoria_insumo IN (3, 4, 10)
     ORDER BY c.nombre_categoria ASC, i.nombre_insumo ASC
   `;
 
