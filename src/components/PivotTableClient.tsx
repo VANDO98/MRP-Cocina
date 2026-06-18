@@ -345,7 +345,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
             bottom: '-1px'
           }}
         >
-          🥦 Proteínas y Verduras (Día Completo)
+          🥩 Proteínas (Día Completo)
         </button>
         <button 
           onClick={() => setVista('consumo')} 
