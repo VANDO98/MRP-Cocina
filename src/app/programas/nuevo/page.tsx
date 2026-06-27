@@ -1,6 +1,8 @@
 import ExcelPasteForm from '@/components/ExcelPasteForm';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export default async function NuevoProgramaPage() {
   const turnos = await db`SELECT id_turno, nombre_turno FROM Turno WHERE activo = TRUE`;
   const recetas = await db`SELECT id_receta, nombre_receta FROM Receta`;
