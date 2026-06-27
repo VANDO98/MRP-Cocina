@@ -2,7 +2,7 @@ import ExcelPasteForm from '@/components/ExcelPasteForm';
 import { db } from '@/lib/db';
 
 export default async function NuevoProgramaPage() {
-  const turnos = await db`SELECT id_turno, nombre_turno FROM Turno`;
+  const turnos = await db`SELECT id_turno, nombre_turno FROM Turno WHERE activo = TRUE`;
   const recetas = await db`SELECT id_receta, nombre_receta FROM Receta`;
 
   return (

@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS Unidad_Medida (
 
 CREATE TABLE IF NOT EXISTS Turno (
     id_turno INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre_turno VARCHAR(50) NOT NULL
+    nombre_turno VARCHAR(50) NOT NULL,
+    activo BOOLEAN DEFAULT TRUE
 );
 
 -- ==========================================
