@@ -4,6 +4,22 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import DeleteProgramaButton from '@/components/DeleteProgramaButton';
 
+const SvgPrint = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" style={{ width: '0.95em', height: '0.95em', marginRight: '0.35rem', display: 'inline-block', verticalAlign: 'middle' }}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.816a1.175 1.175 0 0 1 .167-1.031 3.12 3.12 0 0 0 0-3.57 1.175 1.175 0 0 1-.167-1.031 11.242 11.242 0 0 0-2.81-5.655 1.175 1.175 0 0 1-.037-1.579l.263-.263a1.175 1.175 0 0 1 1.585-.038 11.293 11.293 0 0 0 14.108 0 1.175 1.175 0 0 1 1.585.038l.263.263a1.175 1.175 0 0 1-.038 1.579 11.286 11.286 0 0 0-2.81 5.655 1.175 1.175 0 0 1-.167 1.03 3.12 3.12 0 0 0 0 3.57 1.175 1.175 0 0 1 .167 1.031 11.242 11.242 0 0 0 2.81 5.656 1.175 1.175 0 0 1 .038 1.579l-.263.263a1.175 1.175 0 0 1-1.585.038 11.293 11.293 0 0 0-14.108 0 1.175 1.175 0 0 1-1.585-.038l-.263-.263a1.175 1.175 0 0 1 .038-1.579 11.286 11.286 0 0 0 2.81-5.656Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+  </svg>
+);
+
+function getTurnoBadgeClass(nombre: string) {
+  const n = nombre.toUpperCase();
+  if (n.includes('DESAYUNO') && n.includes('ALMUERZO')) return 'badge-turno badge-turno-consolidado';
+  if (n.includes('DESAYUNO')) return 'badge-turno badge-turno-desayuno';
+  if (n.includes('ALMUERZO')) return 'badge-turno badge-turno-almuerzo';
+  if (n.includes('CENA')) return 'badge-turno badge-turno-cena';
+  return 'badge-turno badge-turno-default';
+}
+
 type ProgRow = {
   id_programa: string;
   fecha: string;
@@ -115,9 +131,9 @@ export default function ProgramasListClient({ fechasOrdenadas, porFecha }: Props
                   <Link
                     href={`/programas/dia/${fecha}`}
                     className="btn-outline"
-                    style={{ fontSize: '0.72rem', padding: '0.3rem 0.85rem' }}
+                    style={{ fontSize: '0.72rem', padding: '0.3rem 0.85rem', display: 'inline-flex', alignItems: 'center' }}
                   >
-                    🖨️ Imprimir día
+                    <SvgPrint /> Imprimir día
                   </Link>
                 </div>
 
@@ -132,7 +148,6 @@ export default function ProgramasListClient({ fechasOrdenadas, porFecha }: Props
                   </thead>
                   <tbody>
                     {programasDeFecha.map(prog => {
-                      const isCena = prog.nombre_turno.toLowerCase().includes('cena');
                       return (
                         <tr key={prog.id_programa}>
                           <td>
@@ -141,7 +156,7 @@ export default function ProgramasListClient({ fechasOrdenadas, porFecha }: Props
                             </span>
                           </td>
                           <td>
-                            <span className={`badge ${isCena ? 'badge-accent' : ''}`}>
+                            <span className={getTurnoBadgeClass(prog.nombre_turno)}>
                               {prog.nombre_turno}
                             </span>
                           </td>

@@ -1,6 +1,21 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
 
+const ArrowIcon = () => (
+  <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" style={{ width: '0.85em', height: '0.85em', marginLeft: '0.25rem', display: 'inline-block', verticalAlign: 'middle' }}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+  </svg>
+);
+
+function getTurnoBadgeClass(nombre: string) {
+  const n = nombre.toUpperCase();
+  if (n.includes('DESAYUNO') && n.includes('ALMUERZO')) return 'badge-turno badge-turno-consolidado';
+  if (n.includes('DESAYUNO')) return 'badge-turno badge-turno-desayuno';
+  if (n.includes('ALMUERZO')) return 'badge-turno badge-turno-almuerzo';
+  if (n.includes('CENA')) return 'badge-turno badge-turno-cena';
+  return 'badge-turno badge-turno-default';
+}
+
 export default async function Dashboard() {
   // ── Contadores básicos ──
   const recetasQuery  = await db`SELECT COUNT(*) as count FROM Receta`;
@@ -144,9 +159,9 @@ export default async function Dashboard() {
           <span className="kpi-label">Programas Registrados</span>
           <span className="kpi-value">{programasCount}</span>
           <span className="kpi-sub">Turnos en el histórico</span>
-          <div style={{ marginTop: '0.75rem' }}>
-            <Link href="/programas" className="btn" style={{ fontSize: '0.72rem', padding: '0.35rem 0.9rem' }}>
-              Ver programas →
+          <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+            <Link href="/programas" className="btn-kpi">
+              Ver programas <ArrowIcon />
             </Link>
           </div>
         </div>
@@ -156,9 +171,9 @@ export default async function Dashboard() {
           <span className="kpi-label">Recetas (BOM)</span>
           <span className="kpi-value">{recetasCount}</span>
           <span className="kpi-sub">En catálogo activo</span>
-          <div style={{ marginTop: '0.75rem' }}>
-            <Link href="/recetas" className="btn" style={{ fontSize: '0.72rem', padding: '0.35rem 0.9rem' }}>
-              Ver recetas →
+          <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+            <Link href="/recetas" className="btn-kpi">
+              Ver recetas <ArrowIcon />
             </Link>
           </div>
         </div>
@@ -168,9 +183,9 @@ export default async function Dashboard() {
           <span className="kpi-label">Insumos</span>
           <span className="kpi-value">{insumosCount}</span>
           <span className="kpi-sub">Ingredientes registrados</span>
-          <div style={{ marginTop: '0.75rem' }}>
-            <Link href="/insumos" className="btn" style={{ fontSize: '0.72rem', padding: '0.35rem 0.9rem' }}>
-              Ver insumos →
+          <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+            <Link href="/insumos" className="btn-kpi">
+              Ver insumos <ArrowIcon />
             </Link>
           </div>
         </div>
@@ -201,7 +216,11 @@ export default async function Dashboard() {
                 const isOver = desv > 0;
                 return (
                   <tr key={idx}>
-                    <td style={{ fontWeight: 500 }}>{ct.nombre_turno}</td>
+                    <td>
+                      <span className={getTurnoBadgeClass(ct.nombre_turno)}>
+                        {ct.nombre_turno}
+                      </span>
+                    </td>
                     <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{teo.toFixed(2)}</td>
                     <td style={{ textAlign: 'right' }}>{real.toFixed(2)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: isOver ? 'var(--danger)' : 'var(--success)' }}>
@@ -252,8 +271,10 @@ export default async function Dashboard() {
                       >
                         {fecha}
                       </Link>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', marginLeft: '0.4rem' }}>
-                        {pr.nombre_turno}
+                      <span style={{ marginLeft: '0.6rem' }}>
+                        <span className={getTurnoBadgeClass(pr.nombre_turno)}>
+                          {pr.nombre_turno}
+                        </span>
                       </span>
                     </td>
                     <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{prog}</td>

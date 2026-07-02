@@ -627,6 +627,70 @@ input.raciones-input {
 }
 
 /* ============================================
+   BADGES DE TURNOS ESTANDARIZADOS
+   ============================================ */
+.badge-turno {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  line-height: 1.2;
+  border: 1.2px solid transparent;
+}
+.badge-turno-desayuno {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border-color: #FDE68A;
+}
+.badge-turno-almuerzo {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #BFDBFE;
+}
+.badge-turno-cena {
+  background-color: #F5F3FF;
+  color: #6D28D9;
+  border-color: #DDD6FE;
+}
+.badge-turno-consolidado {
+  background-color: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
+}
+.badge-turno-default {
+  background-color: #F3F4F6;
+  color: #374151;
+  border-color: #E5E7EB;
+}
+
+/* ============================================
+   BOTÓN SUTIL PARA KPI CARDS
+   ============================================ */
+.btn-kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.8rem;
+  transition: var(--transition);
+  margin-top: 0.25rem;
+}
+.btn-kpi:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+/* ============================================
    IMPRESIÓN A PDF — preservado exacto
    ============================================ */
 @media print {
