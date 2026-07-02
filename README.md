@@ -34,13 +34,21 @@
 ### 7. Exportación Limpia y Plana a PDF 🖨️
 * Botón de impresión integrado con reglas CSS `@media print` que oculta menús, filtros y enlaces de retorno. El reporte de impresión se formatea automáticamente con márgenes estrechos y fuentes pequeñas (diseño plano 100% estilo Excel) para ahorrar papel al máximo.
 
+### 8. Picking de Almacén (Inyección Visual de Colores en PDF) 🌈
+* **Resaltado por Categorías:** Permite subir múltiples PDFs de "Orden de Movimiento" generados por el sistema de picking. El backend parsea el PDF en memoria, cruza los nombres de insumos con PostgreSQL para obtener su categoría y dibuja un pequeño bloque de color indicador (2-3 caracteres de ancho) al término del texto de cada fila de insumo. Esto ahorra tinta de impresión y optimiza el picking físico.
+* **Configuración Dinámica de Colores:** Panel interactivo en el frontend para habilitar/deshabilitar el resalte y cambiar libremente el color hexadecimal asignado a cada categoría, con persistencia automática en `localStorage`.
+* **Impresión Directa sin Descargas:** Al procesarse en lote, se pueden abrir de inmediato en pestañas independientes del navegador, lo que permite visualizarlos e imprimirlos directamente (Ctrl + P) en el visor nativo sin llenar de archivos basura la carpeta de descargas del ordenador.
+
 ---
 
 ## 🛠️ Stack Tecnológico
-* **Frontend/Backend:** Next.js (App Router, Server Actions, React Client/Server Components)
+* **Frontend/Backend:** Next.js 16.2.9 (App Router, Server Actions, React Components, Turbopack)
+* **Procesamiento de PDF:**
+  * **`unpdf`**: Librería agnóstica para el parseo y extracción de texto y coordenadas del PDF en memoria (apta para entornos Serverless y Edge en Vercel).
+  * **`pdf-lib`**: Para la modificación, dibujo e inyección visual de los indicadores de picking en el PDF original.
 * **Base de Datos:** PostgreSQL en la nube (Neon.tech) gestionado a través de la librería cliente `postgres`.
 * **Diseño:** CSS vainilla plano y optimizado (sin bordes redondeados y con paddings mínimos) con tipografía *Inter* para asemejarse al máximo a una hoja de cálculo.
-* **Alojamiento:** Desplegado en Vercel de forma gratuita para acceso multidispositivo permanente y multidispositivo.
+* **Alojamiento:** Desplegado en Vercel de forma gratuita para acceso multidispositivo permanente.
 
 ---
 

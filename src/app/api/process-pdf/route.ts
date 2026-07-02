@@ -89,6 +89,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const colorsConfigRaw = formData.get('colorsConfig') as string | null;
+    let colorsMap: Record<number, any> = {};
+
+    if (colorsConfigRaw) {
+      try {
+        const parsed = JSON.parse(colorsConfigRaw) as Record<string, string>;
+        for (const [catId, hex] of Object.entries(parsed)) {
+          if (hex && hex !== 'none') {
+            const cleanHex = hex.replace('#', '');
+            const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+            const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+            const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+            colorsMap[Number(catId)] = rgb(r, g, b);
+          }
+        }
+      } catch (err) {
+        console.error('Error parseando configuración de colores:', err);
+      }
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     
     // Clonamos el ArrayBuffer utilizando slice(0) para que cada librería trabaje
@@ -149,7 +169,15 @@ export async function POST(req: NextRequest) {
           const insumoData = insumoMap.get(cleanInsumoName);
 
           if (insumoData) {
-            const color = getColorForCategory(insumoData.id, insumoData.categoria);
+            let color = null;
+            const catId = insumoData.id;
+
+            if (catId !== null && colorsMap[catId] !== undefined) {
+              color = colorsMap[catId];
+            } else if (Object.keys(colorsMap).length === 0) {
+              // Fallback por defecto si no se pasó ninguna configuración de colores
+              color = getColorForCategory(insumoData.id, insumoData.categoria);
+            }
             
             if (color) {
               // @ts-ignore
