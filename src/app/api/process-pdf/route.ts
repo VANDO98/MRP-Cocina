@@ -90,7 +90,13 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdfBuffer = new Uint8Array(arrayBuffer);
+    
+    // Clonamos el ArrayBuffer utilizando slice(0) para que cada librería trabaje
+    // con su propio bloque de memoria independiente. Esto evita el error de runtime
+    // "Cannot perform Construct on a detached ArrayBuffer" que ocurre cuando la primera
+    // librería transfiere la propiedad del buffer y lo deja vacío.
+    const pdfBufferRead = new Uint8Array(arrayBuffer.slice(0));
+    const pdfBufferWrite = arrayBuffer.slice(0);
 
     // 1. Obtener insumos y categorías de PostgreSQL en una sola query
     const insumosDb = await db`
@@ -110,11 +116,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Parsear el PDF para extraer textos y coordenadas usando unpdf
-    const pdfDocRead = await getDocumentProxy(pdfBuffer);
+    const pdfDocRead = await getDocumentProxy(pdfBufferRead);
     const numPages = pdfDocRead.numPages;
 
     // 3. Cargar el PDF original en pdf-lib para modificarlo
-    const pdfDocWrite = await PDFDocument.load(arrayBuffer);
+    const pdfDocWrite = await PDFDocument.load(pdfBufferWrite);
     const writePages = pdfDocWrite.getPages();
 
     // Regex para extraer el insumo: "0.180000 (I) AJO PELADO"
