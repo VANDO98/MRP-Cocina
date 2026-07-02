@@ -35,14 +35,7 @@ if (typeof globalThis.ImageData === 'undefined') {
   (globalThis as any).ImageData = class ImageData {};
 }
 
-// @ts-ignore
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-
-// Importamos estáticamente el worker para obligar a Turbopack a incluirlo en el bundle
-// de la API en Vercel. Esto permite que el import() dinámico interno de la librería
-// para el fake-worker se resuelva en memoria en runtime sin buscar en disco.
-// @ts-ignore
-import 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+import { getDocumentProxy } from 'unpdf';
 
 // Definición de colores RGB normalizados
 const COLOR_VERDE = rgb(0.0, 1.0, 0.0);   // Verduras
@@ -116,14 +109,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Parsear el PDF para extraer textos y coordenadas
-    const loadingTask = pdfjsLib.getDocument({
-      data: pdfBuffer,
-      useSystemFonts: true,
-      disableFontFace: true
-    });
-    
-    const pdfDocRead = await loadingTask.promise;
+    // 2. Parsear el PDF para extraer textos y coordenadas usando unpdf
+    const pdfDocRead = await getDocumentProxy(pdfBuffer);
     const numPages = pdfDocRead.numPages;
 
     // 3. Cargar el PDF original en pdf-lib para modificarlo
