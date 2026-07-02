@@ -161,12 +161,13 @@ export async function POST(req: NextRequest) {
               // @ts-ignore
               const height = item.height || item.transform[3] || 10;
 
-              // Dibujar un rectángulo semitransparente sobre el texto del insumo
-              // Restamos el 15% del alto a la coordenada Y para centrar el sombreado sobre la línea base
+              // Dibujar un rectángulo indicador al final del texto del insumo para ahorrar tinta
+              // X: Iniciamos al final del texto (x + width) más un margen estético de 6 puntos
+              // Width: Ajustado a 15 puntos (el tamaño aproximado de 2 a 3 caracteres)
               pageWrite.drawRectangle({
-                x: x,
+                x: x + width + 6,
                 y: y - height * 0.15,
-                width: width,
+                width: 15,
                 height: height * 1.3,
                 color: color,
                 opacity: 0.3, // Opacidad al 30% como requiere la restricción
