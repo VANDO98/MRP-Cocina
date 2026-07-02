@@ -2,6 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { PDFDocument, rgb } from 'pdf-lib';
 
+// Polyfills para entorno Node.js / Serverless requeridos por pdfjs-dist
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    constructor(init?: any) {
+      if (Array.isArray(init)) {
+        this.a = init[0] ?? 1;
+        this.b = init[1] ?? 0;
+        this.c = init[2] ?? 0;
+        this.d = init[3] ?? 1;
+        this.e = init[4] ?? 0;
+        this.f = init[5] ?? 0;
+      } else if (typeof init === 'object' && init !== null) {
+        this.a = init.a ?? 1;
+        this.b = init.b ?? 0;
+        this.c = init.c ?? 0;
+        this.d = init.d ?? 1;
+        this.e = init.e ?? 0;
+        this.f = init.f ?? 0;
+      }
+    }
+  }
+  (globalThis as any).DOMMatrix = DOMMatrix;
+}
+
+if (typeof globalThis.Path2D === 'undefined') {
+  (globalThis as any).Path2D = class Path2D {};
+}
+
+if (typeof globalThis.ImageData === 'undefined') {
+  (globalThis as any).ImageData = class ImageData {};
+}
+
 // Definición de colores RGB normalizados
 const COLOR_VERDE = rgb(0.0, 1.0, 0.0);   // Verduras
 const COLOR_ROJO = rgb(1.0, 0.0, 0.0);    // Cárnicos
