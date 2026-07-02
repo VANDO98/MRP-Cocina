@@ -37,11 +37,9 @@ if (typeof globalThis.ImageData === 'undefined') {
 
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-// @ts-ignore
-import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 
-// Vincular el worker estáticamente en memoria
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configuramos workerSrc como un string de CDN para evitar la resolución local de Webpack/Turbopack
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@6.1.200/legacy/build/pdf.worker.mjs';
 
 // Definición de colores RGB normalizados
 const COLOR_VERDE = rgb(0.0, 1.0, 0.0);   // Verduras
