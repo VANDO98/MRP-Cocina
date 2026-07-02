@@ -71,8 +71,21 @@ export default function ResaltarPdfPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al procesar el archivo.');
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Error al procesar el archivo.';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          if (textError.includes('<!DOCTYPE') || textError.includes('<html')) {
+            errorMessage = `Error del servidor (${response.status}): Ocurrió un error interno en el procesamiento del PDF en la nube.`;
+          } else {
+            errorMessage = textError || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       // Recibir el archivo binario y forzar descarga

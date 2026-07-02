@@ -38,8 +38,11 @@ if (typeof globalThis.ImageData === 'undefined') {
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
-// Configuramos workerSrc como un string de CDN para evitar la resolución local de Webpack/Turbopack
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@6.1.200/legacy/build/pdf.worker.mjs';
+// Importamos estáticamente el worker para obligar a Turbopack a incluirlo en el bundle
+// de la API en Vercel. Esto permite que el import() dinámico interno de la librería
+// para el fake-worker se resuelva en memoria en runtime sin buscar en disco.
+// @ts-ignore
+import 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 
 // Definición de colores RGB normalizados
 const COLOR_VERDE = rgb(0.0, 1.0, 0.0);   // Verduras
