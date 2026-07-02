@@ -22,6 +22,7 @@ export default function RootLayout({
           <div className="header-nav">
             <Link href="/">Dashboard</Link>
             <Link href="/programas" style={{ color: 'var(--accent)', fontWeight: 600 }}>Programas</Link>
+            <Link href="/resaltar-pdf">Picking Almacén</Link>
             
             <div className="nav-dropdown">
               <span className="nav-dropdown-btn">Catálogos ▾</span>
