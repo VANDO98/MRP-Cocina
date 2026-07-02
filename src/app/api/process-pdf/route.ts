@@ -35,6 +35,14 @@ if (typeof globalThis.ImageData === 'undefined') {
   (globalThis as any).ImageData = class ImageData {};
 }
 
+// @ts-ignore
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+// @ts-ignore
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+
+// Vincular el worker estáticamente en memoria
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 // Definición de colores RGB normalizados
 const COLOR_VERDE = rgb(0.0, 1.0, 0.0);   // Verduras
 const COLOR_ROJO = rgb(1.0, 0.0, 0.0);    // Cárnicos
@@ -107,11 +115,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Cargar pdfjs-dist dinámicamente para evitar problemas de compilación de worker
-    // @ts-ignore
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    
-    // Parsear el PDF para extraer textos y coordenadas
+    // 2. Parsear el PDF para extraer textos y coordenadas
     const loadingTask = pdfjsLib.getDocument({
       data: pdfBuffer,
       useSystemFonts: true,
