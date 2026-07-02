@@ -77,6 +77,9 @@ export default function ResaltarPdfPage() {
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
+          if (errorData.stack) {
+            errorMessage += ` | Detalle: ${errorData.stack}`;
+          }
         } else {
           const textError = await response.text();
           if (textError.includes('<!DOCTYPE') || textError.includes('<html')) {

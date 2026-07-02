@@ -199,7 +199,11 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error al procesar el archivo PDF:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor al procesar el archivo PDF: ' + error.message },
+      { 
+        error: 'Error interno del servidor al procesar el archivo PDF: ' + error.message,
+        stack: error.stack || 'No stack trace available',
+        details: error.toString()
+      },
       { status: 500 }
     );
   }
