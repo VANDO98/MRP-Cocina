@@ -35,6 +35,7 @@ export default function ExportarValorizacionBtn() {
         "DÍA": row.fecha,
         "TURNO": row.turno,
         "PLATO": row.plato,
+        "PORCIONES": row.raciones,
         "CATEGORÍA": row.categoria,
         "INSUMO": row.insumo,
         "CANT. CONSUMIDA (TEÓRICA)": Number(row.cantidad.toFixed(3)),
@@ -53,7 +54,7 @@ export default function ExportarValorizacionBtn() {
         alignment: { horizontal: "center", vertical: "center" }
       };
 
-      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:I1');
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:J1');
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const address = XLSX.utils.encode_col(C) + "1";
         if (!ws[address]) continue;
@@ -64,6 +65,7 @@ export default function ExportarValorizacionBtn() {
         { wch: 12 }, // DIA
         { wch: 15 }, // TURNO
         { wch: 35 }, // PLATO
+        { wch: 12 }, // PORCIONES
         { wch: 15 }, // CATEGORIA
         { wch: 30 }, // INSUMO
         { wch: 25 }, // CANT

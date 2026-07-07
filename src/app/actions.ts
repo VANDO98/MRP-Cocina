@@ -391,6 +391,7 @@ export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFi
       fecha: dateStr,
       turno: row.nombre_turno as string,
       plato: row.nombre_receta as string,
+      raciones: raciones,
       categoria: row.nombre_categoria as string || 'Otros',
       insumo: row.nombre_insumo as string,
       cantidad: cantidad,
