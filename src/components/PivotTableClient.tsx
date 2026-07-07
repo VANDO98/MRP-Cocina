@@ -385,6 +385,27 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
         >
           📝 Registrar Real Producido
         </button>
+        <a 
+          href={`/programas/dia/${programa.fecha}/valorizacion`}
+          style={{ 
+            padding: '0.5rem 1.2rem', 
+            cursor: 'pointer', 
+            border: '1px solid #ddd',
+            borderBottom: '1px solid transparent',
+            background: '#f9f9f9', 
+            color: 'var(--primary-color)',
+            fontWeight: 'bold',
+            fontSize: '0.9rem',
+            borderTopLeftRadius: '4px',
+            borderTopRightRadius: '4px',
+            position: 'relative',
+            bottom: '-1px',
+            textDecoration: 'none',
+            display: 'inline-block'
+          }}
+        >
+          💰 Reporte de Valorización (Food Cost)
+        </a>
       </div>
 
       {/* Controles de filtros e impresion mas limpios */}
