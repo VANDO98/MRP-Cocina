@@ -5,7 +5,7 @@ import DespachoInput from './DespachoInput';
 import RacionesProducidasInput from './RacionesProducidasInput';
 import DespachoDiarioInput from './DespachoDiarioInput';
 import * as XLSX from 'xlsx-js-style';
-import { cerrarProgramaConTeorico } from '@/app/actions';
+import { cerrarDiaConTeorico } from '@/app/actions';
 
 type Insumo = {
   id_insumo: number;
@@ -818,13 +818,13 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
               <button
                 disabled={isClosing}
                 onClick={async () => {
-                  if (confirm("¿Estás seguro de cerrar este programa? El consumo teórico de los insumos pasará a ser tu Despacho Real para la valorización.")) {
+                  if (confirm("¿Estás seguro de cerrar TODOS LOS TURNOS de este día? El consumo teórico de los insumos pasará a ser tu Despacho Real para la valorización de toda la fecha.")) {
                     setIsClosing(true);
                     try {
-                      await cerrarProgramaConTeorico(programa.id_programa);
-                      alert("¡Programa cerrado con éxito! Las cantidades reales han sido asumidas del cálculo teórico.");
+                      await cerrarDiaConTeorico(programa.fecha);
+                      alert("¡Día cerrado con éxito! Las cantidades reales de todos los turnos han sido asumidas del cálculo teórico.");
                     } catch(err) {
-                      alert("Hubo un error al cerrar el programa");
+                      alert("Hubo un error al cerrar el día");
                     } finally {
                       setIsClosing(false);
                     }

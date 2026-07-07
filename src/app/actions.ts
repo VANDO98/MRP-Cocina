@@ -153,6 +153,38 @@ export async function cerrarProgramaConTeorico(id_programa: string) {
   revalidatePath(`/programas/${id_programa}`);
 }
 
+export async function cerrarDiaConTeorico(fecha: string) {
+  // Obtenemos todos los programas de esta fecha
+  const programas = await db`SELECT id_programa FROM Programa_Produccion WHERE fecha = ${fecha}`;
+  if (programas.length === 0) return;
+
+  const ids = programas.map(p => p.id_programa);
+
+  await db.begin(async sql => {
+    // 1. Obtener el teórico producido por insumo y programa basado en las raciones reales
+    const teoricos = await sql`
+      SELECT pd.id_programa, rd.id_insumo, SUM(rd.cantidad_unitaria * pd.raciones_producidas) as cantidad_teorica_producida
+      FROM Programa_Detalle pd
+      JOIN Receta_Detalle rd ON pd.id_receta = rd.id_receta
+      WHERE pd.id_programa = ANY(${ids})
+      GROUP BY pd.id_programa, rd.id_insumo
+    `;
+
+    // 2. Actualizar el despacho consolidado
+    for (const t of teoricos) {
+      await sql`
+        UPDATE Despacho_Consolidado
+        SET cantidad_real_entregada = ${t.cantidad_teorica_producida}
+        WHERE id_programa = ${t.id_programa} AND id_insumo = ${t.id_insumo}
+      `;
+    }
+  });
+
+  revalidatePath(`/programas`);
+  revalidatePath(`/programas/dia/${fecha}`);
+  revalidatePath(`/programas/dia/${fecha}/valorizacion`);
+}
+
 export async function deletePrograma(id_programa: string) {
   await db.begin(async sql => {
     await sql`DELETE FROM Programa_Detalle WHERE id_programa = ${id_programa}`;
