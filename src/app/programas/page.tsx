@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
 import ProgramasListClient from '@/components/ProgramasListClient';
+import ExportarValorizacionBtn from '@/components/ExportarValorizacionBtn';
 
 export default async function ProgramasPage() {
   const programas = await db`
@@ -45,9 +46,12 @@ export default async function ProgramasPage() {
               {programas.length} programa{programas.length !== 1 ? 's' : ''} · {fechasOrdenadas.length} día{fechasOrdenadas.length !== 1 ? 's' : ''} registrados
             </p>
           </div>
-          <Link href="/programas/nuevo" className="btn">
-            + Nuevo Programa
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <ExportarValorizacionBtn />
+            <Link href="/programas/nuevo" className="btn">
+              + Nuevo Programa
+            </Link>
+          </div>
         </div>
       </div>
 
