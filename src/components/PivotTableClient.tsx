@@ -5,6 +5,7 @@ import DespachoInput from './DespachoInput';
 import RacionesProducidasInput from './RacionesProducidasInput';
 import DespachoDiarioInput from './DespachoDiarioInput';
 import * as XLSX from 'xlsx-js-style';
+import { cerrarProgramaConTeorico } from '@/app/actions';
 
 type Insumo = {
   id_insumo: number;
@@ -62,6 +63,7 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
   const [mostrarAbarrotes, setMostrarAbarrotes] = useState(true);
   const [vista, setVista] = useState<'pivot' | 'diario' | 'consumo' | 'raciones'>('pivot');
   const [mostrarDetalleRecetas, setMostrarDetalleRecetas] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   // El turno activo para este programa consolidado es el turno general oficial
   const turnosActivos = [programa.nombre_turno];
@@ -800,7 +802,6 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
                     </>
                   );
                 })}
-                {/* Fila total del día */}
                 <tr style={{ background: '#1a1a2e', color: '#fff', fontWeight: 700 }}>
                   <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: '#fff' }}>TOTAL DEL DÍA</td>
                   <td style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--accent)' }}>{totalProgramadasDia}</td>
@@ -808,6 +809,40 @@ export default function PivotTableClient({ programa, recetasProgramadas, insumos
                 </tr>
               </tbody>
             </table>
+
+            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '1rem', background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px' }}>
+              <div style={{ marginRight: '1rem', textAlign: 'right' }}>
+                <p style={{ margin: 0, fontWeight: 'bold', color: 'var(--primary-color)' }}>¿Terminaste de registrar todas las raciones?</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#666' }}>Esto copiará el consumo teórico de los insumos y lo asumirá como el despacho real.</p>
+              </div>
+              <button
+                disabled={isClosing}
+                onClick={async () => {
+                  if (confirm("¿Estás seguro de cerrar este programa? El consumo teórico de los insumos pasará a ser tu Despacho Real para la valorización.")) {
+                    setIsClosing(true);
+                    try {
+                      await cerrarProgramaConTeorico(programa.id_programa);
+                      alert("¡Programa cerrado con éxito! Las cantidades reales han sido asumidas del cálculo teórico.");
+                    } catch(err) {
+                      alert("Hubo un error al cerrar el programa");
+                    } finally {
+                      setIsClosing(false);
+                    }
+                  }
+                }}
+                style={{
+                  background: isClosing ? '#ccc' : 'var(--primary-color)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '4px',
+                  fontWeight: 'bold',
+                  cursor: isClosing ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isClosing ? 'Cerrando...' : '🔒 Cerrar Programa y Asumir Consumo'}
+              </button>
+            </div>
           </div>
         );
       })()}

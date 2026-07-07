@@ -129,6 +129,30 @@ export async function updateRacionesProducidas(id_programa: string, id_receta: n
   revalidatePath(`/programas/${id_programa}`);
 }
 
+export async function cerrarProgramaConTeorico(id_programa: string) {
+  await db.begin(async sql => {
+    // 1. Obtener el teórico producido por insumo basado en las raciones reales (raciones_producidas)
+    const teoricos = await sql`
+      SELECT rd.id_insumo, SUM(rd.cantidad_unitaria * pd.raciones_producidas) as cantidad_teorica_producida
+      FROM Programa_Detalle pd
+      JOIN Receta_Detalle rd ON pd.id_receta = rd.id_receta
+      WHERE pd.id_programa = ${id_programa}
+      GROUP BY rd.id_insumo
+    `;
+
+    // 2. Actualizar el despacho consolidado asignando la cantidad real entregada igual al teórico producido
+    for (const t of teoricos) {
+      await sql`
+        UPDATE Despacho_Consolidado
+        SET cantidad_real_entregada = ${t.cantidad_teorica_producida}
+        WHERE id_programa = ${id_programa} AND id_insumo = ${t.id_insumo}
+      `;
+    }
+  });
+
+  revalidatePath(`/programas/${id_programa}`);
+}
+
 export async function deletePrograma(id_programa: string) {
   await db.begin(async sql => {
     await sql`DELETE FROM Programa_Detalle WHERE id_programa = ${id_programa}`;
