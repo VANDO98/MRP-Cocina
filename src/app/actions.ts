@@ -329,3 +329,74 @@ export async function createInsumo(nombre_insumo: string, id_categoria_insumo: n
   revalidatePath('/insumos');
   return result[0].id_insumo;
 }
+
+export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFin: string) {
+  // 1. Obtener los detalles de los platos y las recetas en el rango de fechas
+  const data = await db`
+    SELECT 
+      p.fecha,
+      t.nombre_turno,
+      r.nombre_receta,
+      i.id_insumo,
+      i.nombre_insumo,
+      c.nombre_categoria,
+      u.simbolo,
+      pd.raciones_producidas,
+      pd.raciones_programadas,
+      rd.cantidad_unitaria
+    FROM Programa_Produccion p
+    JOIN Turno t ON p.id_turno = t.id_turno
+    JOIN Programa_Detalle pd ON p.id_programa = pd.id_programa
+    JOIN Receta r ON pd.id_receta = r.id_receta
+    JOIN Receta_Detalle rd ON r.id_receta = rd.id_receta
+    JOIN Insumo i ON rd.id_insumo = i.id_insumo
+    LEFT JOIN Categoria_Insumo c ON i.id_categoria_insumo = c.id_categoria_insumo
+    LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
+    WHERE p.fecha >= ${fechaInicio} AND p.fecha <= ${fechaFin}
+    ORDER BY p.fecha ASC, t.id_turno ASC, r.nombre_receta ASC, c.nombre_categoria ASC, i.nombre_insumo ASC
+  `;
+
+  // 2. Obtener todo el historial de precios
+  const historiales = await db`
+    SELECT id_insumo, precio_unitario, fecha_inicio
+    FROM Precio_Insumo_Historial 
+    ORDER BY fecha_inicio DESC
+  `;
+
+  // 3. Obtener precios por defecto actuales por si no hay historial
+  const insumos = await db`SELECT id_insumo, precio_defecto FROM Insumo`;
+  const mapaPreciosDefecto: Record<number, number> = {};
+  insumos.forEach(i => { mapaPreciosDefecto[i.id_insumo as number] = Number(i.precio_defecto); });
+
+  // Función para obtener el precio aplicable a una fecha
+  const getPrecio = (id_insumo: number, fecha: string) => {
+    // La fecha de la BD viene como Date, la convertimos a string YYYY-MM-DD
+    const dateStr = new Date(fecha).toISOString().split('T')[0];
+    const h = historiales.find(x => {
+      const hDateStr = new Date(x.fecha_inicio as Date).toISOString().split('T')[0];
+      return x.id_insumo === id_insumo && hDateStr <= dateStr;
+    });
+    if (h) return Number(h.precio_unitario);
+    return mapaPreciosDefecto[id_insumo] || 0;
+  };
+
+  return data.map(row => {
+    const raciones = row.raciones_producidas !== null ? Number(row.raciones_producidas) : Number(row.raciones_programadas);
+    const cantidad = raciones * Number(row.cantidad_unitaria);
+    const dateStr = new Date(row.fecha as string).toISOString().split('T')[0];
+    const precio = getPrecio(row.id_insumo as number, dateStr);
+    const costo = cantidad * precio;
+
+    return {
+      fecha: dateStr,
+      turno: row.nombre_turno as string,
+      plato: row.nombre_receta as string,
+      categoria: row.nombre_categoria as string || 'Otros',
+      insumo: row.nombre_insumo as string,
+      cantidad: cantidad,
+      simbolo: row.simbolo as string,
+      precio_unitario: precio,
+      costo_total: costo
+    };
+  });
+}
