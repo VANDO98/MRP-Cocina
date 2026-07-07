@@ -29,6 +29,7 @@ export default function RootLayout({
               <div className="nav-dropdown-content">
                 <Link href="/recetas">Recetas</Link>
                 <Link href="/insumos">Insumos</Link>
+                <Link href="/precios">Precios Insumos</Link>
               </div>
             </div>
           </div>

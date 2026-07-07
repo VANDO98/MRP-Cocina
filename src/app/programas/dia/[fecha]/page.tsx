@@ -131,7 +131,12 @@ export default async function DiaProgramasPage({ params }: { params: Promise<{ f
             {fechaDisplay} · {turnos.length} turno{turnos.length !== 1 ? 's' : ''} · {totalInsumos} insumos
           </p>
         </div>
-        <PrintButton />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link href={`/programas/dia/${fecha}/valorizacion`} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none', fontSize: '0.72rem', padding: '0.3rem 0.85rem', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+            💰 Reporte de Valorización
+          </Link>
+          <PrintButton />
+        </div>
       </div>
 
       {/* ── CABECERA IMPRIMIBLE ───────────────────────────────────────────── */}
