@@ -38,10 +38,12 @@ export default function ExportarValorizacionBtn() {
         "PORCIONES": row.raciones,
         "CATEGORÍA": row.categoria,
         "INSUMO": row.insumo,
-        "CANT. CONSUMIDA (TEÓRICA)": Number(row.cantidad.toFixed(3)),
-        "UNIDAD": row.simbolo,
         "PRECIO UNITARIO (S/.)": Number(row.precio_unitario.toFixed(2)),
-        "COSTO TOTAL (S/.)": Number(row.costo_total.toFixed(2))
+        "CANT. TEÓRICA": Number(row.cantidad_teorica.toFixed(3)),
+        "COSTO TEÓRICO (S/.)": Number(row.costo_teorico.toFixed(2)),
+        "DESPACHO REAL": Number(row.cantidad_real.toFixed(3)),
+        "COSTO REAL (S/.)": Number(row.costo_real.toFixed(2)),
+        "UNIDAD": row.simbolo
       }));
 
       const wb = XLSX.utils.book_new();
@@ -54,7 +56,7 @@ export default function ExportarValorizacionBtn() {
         alignment: { horizontal: "center", vertical: "center" }
       };
 
-      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:J1');
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:L1');
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const address = XLSX.utils.encode_col(C) + "1";
         if (!ws[address]) continue;
@@ -68,10 +70,12 @@ export default function ExportarValorizacionBtn() {
         { wch: 12 }, // PORCIONES
         { wch: 15 }, // CATEGORIA
         { wch: 30 }, // INSUMO
-        { wch: 25 }, // CANT
+        { wch: 22 }, // PRECIO UNITARIO
+        { wch: 18 }, // CANT. TEÓRICA
+        { wch: 20 }, // COSTO TEÓRICO
+        { wch: 18 }, // DESPACHO REAL
+        { wch: 20 }, // COSTO REAL
         { wch: 10 }, // UNIDAD
-        { wch: 22 }, // PRECIO
-        { wch: 20 }, // COSTO
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, "Valorización Histórica");

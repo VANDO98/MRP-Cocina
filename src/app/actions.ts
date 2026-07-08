@@ -352,10 +352,11 @@ export async function createInsumo(nombre_insumo: string, id_categoria_insumo: n
 }
 
 export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFin: string) {
-  // 1. Obtener los detalles de los platos y las recetas en el rango de fechas
+  // 1. Obtener los detalles de los platos y las recetas en el rango de fechas (incluyendo id_programa)
   const data = await db`
     SELECT 
       p.fecha,
+      p.id_programa,
       t.nombre_turno,
       r.nombre_receta,
       i.id_insumo,
@@ -389,9 +390,35 @@ export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFi
   const mapaPreciosDefecto: Record<number, number> = {};
   insumos.forEach(i => { mapaPreciosDefecto[i.id_insumo as number] = Number(i.precio_defecto); });
 
+  // 4. Obtener las cantidades reales del despacho consolidado en este rango de fechas
+  const despachoConsolidado = await db`
+    SELECT id_programa, id_insumo, cantidad_real_entregada
+    FROM Despacho_Consolidado
+    WHERE id_programa IN (
+      SELECT id_programa FROM Programa_Produccion
+      WHERE fecha >= ${fechaInicio} AND fecha <= ${fechaFin}
+    )
+  `;
+
+  const mapDespachoReal: Record<string, number> = {};
+  despachoConsolidado.forEach(d => {
+    mapDespachoReal[`${d.id_programa}_${d.id_insumo}`] = Number(d.cantidad_real_entregada || 0);
+  });
+
+  // 5. Consolidar el teórico por insumo por cada programa para prorratear el real
+  const totalTeoricoPorInsumoYProg: Record<string, number> = {};
+  const conteoRecetasPorInsumoYProg: Record<string, number> = {};
+
+  data.forEach(row => {
+    const r = row.raciones_producidas !== null ? Number(row.raciones_producidas) : Number(row.raciones_programadas);
+    const qty = r * Number(row.cantidad_unitaria);
+    const key = `${row.id_programa}_${row.id_insumo}`;
+    totalTeoricoPorInsumoYProg[key] = (totalTeoricoPorInsumoYProg[key] || 0) + qty;
+    conteoRecetasPorInsumoYProg[key] = (conteoRecetasPorInsumoYProg[key] || 0) + 1;
+  });
+
   // Función para obtener el precio aplicable a una fecha
   const getPrecio = (id_insumo: number, fecha: string) => {
-    // La fecha de la BD viene como Date, la convertimos a string YYYY-MM-DD
     const dateStr = new Date(fecha).toISOString().split('T')[0];
     const h = historiales.find(x => {
       const hDateStr = new Date(x.fecha_inicio as Date).toISOString().split('T')[0];
@@ -403,10 +430,25 @@ export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFi
 
   return data.map(row => {
     const raciones = row.raciones_producidas !== null ? Number(row.raciones_producidas) : Number(row.raciones_programadas);
-    const cantidad = raciones * Number(row.cantidad_unitaria);
+    const cantidadTeorica = raciones * Number(row.cantidad_unitaria);
+    
+    // Prorrateo
+    const key = `${row.id_programa}_${row.id_insumo}`;
+    const totalRealDelInsumo = mapDespachoReal[key] || 0;
+    const totalTeoricoDelInsumo = totalTeoricoPorInsumoYProg[key] || 0;
+
+    let qtyRealDespachada = 0;
+    if (totalTeoricoDelInsumo > 0) {
+      qtyRealDespachada = totalRealDelInsumo * (cantidadTeorica / totalTeoricoDelInsumo);
+    } else {
+      const count = conteoRecetasPorInsumoYProg[key] || 1;
+      qtyRealDespachada = totalRealDelInsumo / count;
+    }
+
     const dateStr = new Date(row.fecha as string).toISOString().split('T')[0];
     const precio = getPrecio(row.id_insumo as number, dateStr);
-    const costo = cantidad * precio;
+    const costoTeorico = cantidadTeorica * precio;
+    const costoReal = qtyRealDespachada * precio;
 
     return {
       fecha: dateStr,
@@ -415,10 +457,12 @@ export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFi
       raciones: raciones,
       categoria: row.nombre_categoria as string || 'Otros',
       insumo: row.nombre_insumo as string,
-      cantidad: cantidad,
+      cantidad_teorica: cantidadTeorica,
+      cantidad_real: qtyRealDespachada,
       simbolo: row.simbolo as string,
       precio_unitario: precio,
-      costo_total: costo
+      costo_teorico: costoTeorico,
+      costo_real: costoReal
     };
   });
 }
