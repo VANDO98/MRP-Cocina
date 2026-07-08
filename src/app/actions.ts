@@ -422,3 +422,35 @@ export async function getValorizacionHistoricaExcel(fechaInicio: string, fechaFi
     };
   });
 }
+
+export async function createTurno(nombre: string) {
+  const nombreLimpio = nombre.trim().toUpperCase();
+  if (!nombreLimpio) throw new Error("El nombre del turno no puede estar vacío");
+
+  const exist = await db`SELECT id_turno FROM Turno WHERE nombre_turno = ${nombreLimpio}`;
+  if (exist.length > 0) {
+    await db`UPDATE Turno SET activo = TRUE WHERE id_turno = ${exist[0].id_turno}`;
+    revalidatePath('/turnos');
+    return exist[0].id_turno;
+  }
+
+  const result = await db`
+    INSERT INTO Turno (nombre_turno, activo)
+    VALUES (${nombreLimpio}, TRUE)
+    RETURNING id_turno
+  `;
+  revalidatePath('/turnos');
+  revalidatePath('/programas/nuevo');
+  return result[0].id_turno;
+}
+
+export async function toggleTurnoActivo(id_turno: number, activo: boolean) {
+  await db`
+    UPDATE Turno
+    SET activo = ${activo}
+    WHERE id_turno = ${id_turno}
+  `;
+  revalidatePath('/turnos');
+  revalidatePath('/programas/nuevo');
+}
+
