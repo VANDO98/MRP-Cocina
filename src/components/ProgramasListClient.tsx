@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import DeleteProgramaButton from '@/components/DeleteProgramaButton';
 
+// Icono de impresora para imprimir día
 const SvgPrint = () => (
   <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" style={{ width: '0.95em', height: '0.95em', marginRight: '0.35rem', display: 'inline-block', verticalAlign: 'middle' }}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.816a1.175 1.175 0 0 1 .167-1.031 3.12 3.12 0 0 0 0-3.57 1.175 1.175 0 0 1-.167-1.031 11.242 11.242 0 0 0-2.81-5.655 1.175 1.175 0 0 1-.037-1.579l.263-.263a1.175 1.175 0 0 1 1.585-.038 11.293 11.293 0 0 0 14.108 0 1.175 1.175 0 0 1 1.585.038l.263.263a1.175 1.175 0 0 1-.038 1.579 11.286 11.286 0 0 0-2.81 5.655 1.175 1.175 0 0 1-.167 1.03 3.12 3.12 0 0 0 0 3.57 1.175 1.175 0 0 1 .167 1.031 11.242 11.242 0 0 0 2.81 5.656 1.175 1.175 0 0 1 .038 1.579l-.263.263a1.175 1.175 0 0 1-1.585.038 11.293 11.293 0 0 0-14.108 0 1.175 1.175 0 0 1-1.585-.038l-.263-.263a1.175 1.175 0 0 1 .038-1.579 11.286 11.286 0 0 0 2.81-5.656Z" />
@@ -25,176 +26,517 @@ type ProgRow = {
   fecha: string;
   nombre_turno: string;
   cant_recetas: number;
+  estado: string;
 };
 
 type Props = {
-  fechasOrdenadas: string[];
-  porFecha: Record<string, ProgRow[]>;
+  programas: ProgRow[];
 };
 
-export default function ProgramasListClient({ fechasOrdenadas, porFecha }: Props) {
+export default function ProgramasListClient({ programas }: Props) {
+  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [visibleCount, setVisibleCount] = useState(7); // Mostramos 7 días por defecto (una semana)
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [turnoFilter, setTurnoFilter] = useState('TODOS');
+  const [estadoFilter, setEstadoFilter] = useState('TODOS');
 
-  // Filtrar fechas basadas en el término de búsqueda
-  const filteredFechas = useMemo(() => {
-    if (!searchTerm.trim()) return fechasOrdenadas;
-    const term = searchTerm.toLowerCase();
-    
-    return fechasOrdenadas.filter(fecha => {
-      // Formateamos la fecha para poder buscar cosas como "15 junio" o "lunes"
-      const fechaDisplay = new Date(fecha + 'T12:00:00').toLocaleDateString('es-PE', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }).toLowerCase();
-      
-      return fechaDisplay.includes(term) || fecha.includes(term);
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  // Selección individual/masiva de filas (estilo ERP)
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+
+  // Resetear filtros
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setFechaInicio('');
+    setFechaFin('');
+    setTurnoFilter('TODOS');
+    setEstadoFilter('TODOS');
+    setCurrentPage(1);
+  };
+
+  // Obtener turnos únicos para el filtro
+  const turnosUnicos = useMemo(() => {
+    const set = new Set(programas.map(p => p.nombre_turno));
+    return ['TODOS', ...Array.from(set)];
+  }, [programas]);
+
+  // Filtrado de programas
+  const filteredProgramas = useMemo(() => {
+    return programas.filter(p => {
+      // 1. Buscador (por ID o por fecha textual)
+      const term = searchTerm.toLowerCase();
+      const matchSearch = !term || 
+        p.id_programa.toLowerCase().includes(term) ||
+        p.fecha.includes(term) ||
+        p.nombre_turno.toLowerCase().includes(term);
+
+      // 2. Filtro de Fechas (Rango)
+      const matchFechaInicio = !fechaInicio || p.fecha >= fechaInicio;
+      const matchFechaFin = !fechaFin || p.fecha <= fechaFin;
+
+      // 3. Filtro de Turno
+      const matchTurno = turnoFilter === 'TODOS' || p.nombre_turno === turnoFilter;
+
+      // 4. Filtro de Estado
+      const matchEstado = estadoFilter === 'TODOS' || 
+        (estadoFilter === 'CERRADO' && p.estado === 'Cerrado') ||
+        (estadoFilter === 'ABIERTO' && p.estado === 'Abierto');
+
+      return matchSearch && matchFechaInicio && matchFechaFin && matchTurno && matchEstado;
     });
-  }, [fechasOrdenadas, searchTerm]);
+  }, [programas, searchTerm, fechaInicio, fechaFin, turnoFilter, estadoFilter]);
 
-  // Paginación "Ver más"
-  const visibleFechas = filteredFechas.slice(0, visibleCount);
-  const hasMore = visibleFechas.length < filteredFechas.length;
+  // Paginación de datos filtrados
+  const totalPages = Math.ceil(filteredProgramas.length / itemsPerPage) || 1;
+  
+  // Si los filtros reducen la cantidad de páginas y la página actual queda fuera
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 7);
+  const paginatedProgramas = useMemo(() => {
+    const start = (safeCurrentPage - 1) * itemsPerPage;
+    return filteredProgramas.slice(start, start + itemsPerPage);
+  }, [filteredProgramas, safeCurrentPage]);
+
+  // Manejo de checkboxes
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    const newSelected: Record<string, boolean> = {};
+    if (checked) {
+      paginatedProgramas.forEach(p => {
+        newSelected[p.id_programa] = true;
+      });
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    setSelectedIds(prev => ({
+      ...prev,
+      [id]: checked
+    }));
+  };
+
+  const isAllSelected = paginatedProgramas.length > 0 && paginatedProgramas.every(p => selectedIds[p.id_programa]);
+
+  // Formateador de fecha local rápida
+  const formatFechaLocal = (fechaStr: string) => {
+    const parts = fechaStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return fechaStr;
   };
 
   return (
     <div>
-      {/* ── BARRA DE BÚSQUEDA ── */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}>🔍</span>
-          <input 
-            type="text" 
-            placeholder="Buscar por día, fecha o mes (ej. Lunes, 15 junio)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '0.6rem 0.6rem 0.6rem 2rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-subtle)', outline: 'none' }}
-          />
+      {/* ── SECCIÓN DE FILTROS ESTILO ERP (RESTAURAN.PE) ── */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+          
+          {/* Buscador general */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Buscar ID o Turno
+            </label>
+            <input 
+              type="text" 
+              placeholder="Ej. 2026-07-04 o Cena..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="input"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          {/* Rango de Fechas */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Fecha Desde
+            </label>
+            <input 
+              type="date" 
+              value={fechaInicio}
+              onChange={(e) => { setFechaInicio(e.target.value); setCurrentPage(1); }}
+              className="input"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Fecha Hasta
+            </label>
+            <input 
+              type="date" 
+              value={fechaFin}
+              onChange={(e) => { setFechaFin(e.target.value); setCurrentPage(1); }}
+              className="input"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          {/* Turno */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Filtrar Turno
+            </label>
+            <select 
+              value={turnoFilter} 
+              onChange={(e) => { setTurnoFilter(e.target.value); setCurrentPage(1); }}
+              className="input"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            >
+              {turnosUnicos.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Estado Registro
+            </label>
+            <select 
+              value={estadoFilter} 
+              onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}
+              className="input"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            >
+              <option value="TODOS">TODOS</option>
+              <option value="ABIERTO">PENDIENTE (ABIERTO)</option>
+              <option value="CERRADO">CERRADO (FINALIZADO)</option>
+            </select>
+          </div>
+
+          {/* Botones Limpiar */}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              onClick={handleResetFilters}
+              className="btn btn-outline"
+              style={{ width: '100%', padding: '0.55rem', fontSize: '0.8rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            >
+              🧹 Limpiar
+            </button>
+          </div>
+
         </div>
       </div>
 
-      {filteredFechas.length === 0 ? (
-        <div className="empty-state">
-          No se encontraron programas para la búsqueda "{searchTerm}".
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {visibleFechas.map(fecha => {
-            const programasDeFecha = porFecha[fecha];
-            const fechaDisplay = new Date(fecha + 'T12:00:00').toLocaleDateString('es-PE', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            });
+      {/* ── PANEL DE FILTROS ACTIVOS (Visualmente idéntico a ERP) ── */}
+      <div style={{
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: 'var(--radius-md)',
+        padding: '0.6rem 1rem',
+        marginBottom: '1rem',
+        fontSize: '0.78rem',
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+        color: '#475569'
+      }}>
+        <strong style={{ color: '#1e293b' }}>Filtros habilitados:</strong>
+        <span style={{ background: '#e2e8f0', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+          Fechas: {fechaInicio ? formatFechaLocal(fechaInicio) : 'Inicio'} al {fechaFin ? formatFechaLocal(fechaFin) : 'Fin'}
+        </span>
+        <span style={{ background: '#e2e8f0', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+          Turno: {turnoFilter}
+        </span>
+        <span style={{ background: '#e2e8f0', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+          Estado: {estadoFilter === 'TODOS' ? 'Todos' : estadoFilter === 'ABIERTO' ? 'Pendiente' : 'Cerrado'}
+        </span>
+        {searchTerm && (
+          <span style={{ background: '#e2e8f0', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+            Búsqueda: "{searchTerm}"
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--text-primary)' }}>
+          {filteredProgramas.length} registros encontrados
+        </span>
+      </div>
 
-            return (
-              <div key={fecha} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{
-                  padding: '0.75rem 1rem',
-                  background: 'var(--bg-muted)',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 700,
-                      fontSize: '0.95rem',
-                      color: 'var(--text-primary)',
-                      textTransform: 'capitalize',
-                    }}>
-                      {fechaDisplay}
-                    </span>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      padding: '0.15rem 0.6rem',
-                      borderRadius: '9999px',
-                      background: 'var(--border-subtle)',
-                      color: 'var(--text-secondary)',
-                    }}>
-                      {programasDeFecha.length} turno{programasDeFecha.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <Link
-                    href={`/programas/dia/${fecha}`}
-                    className="btn-outline"
-                    style={{ fontSize: '0.72rem', padding: '0.3rem 0.85rem', display: 'inline-flex', alignItems: 'center' }}
+      {/* ── TABLA PLANA ESTILO ERP ── */}
+      <div className="card" style={{ padding: 0, overflowX: 'auto', border: '1px solid var(--border-subtle)' }}>
+        <table style={{ margin: 0, width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #e2e8f0' }}>
+              <th style={{ width: '45px', textAlign: 'center', padding: '0.75rem 1rem' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isAllSelected}
+                  onChange={handleSelectAll}
+                  style={{ cursor: 'pointer' }}
+                />
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700 }}>Código (ID)</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700 }}>Fecha Producción</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700 }}>Turno</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700, textAlign: 'center' }}>Cant. Platos</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700 }}>Estado</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', textTransform: 'uppercase', color: '#475569', fontWeight: 700, textAlign: 'center', width: '380px' }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedProgramas.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>
+                  Ningún programa coincide con los filtros aplicados.
+                </td>
+              </tr>
+            ) : (
+              paginatedProgramas.map(prog => {
+                const isSelected = !!selectedIds[prog.id_programa];
+                const dateObj = new Date(prog.fecha + 'T12:00:00');
+                const weekday = dateObj.toLocaleDateString('es-PE', { weekday: 'short' });
+                
+                return (
+                  <tr 
+                    key={prog.id_programa}
+                    style={{ 
+                      borderBottom: '1px solid var(--border-subtle)',
+                      background: isSelected ? '#f1f5f9' : 'transparent',
+                      transition: 'background 0.15s ease'
+                    }}
                   >
-                    <SvgPrint /> Imprimir día
-                  </Link>
-                </div>
+                    {/* Checkbox */}
+                    <td style={{ textAlign: 'center', padding: '0.65rem 1rem' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={(e) => handleSelectRow(prog.id_programa, e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
+                    
+                    {/* ID */}
+                    <td style={{ padding: '0.65rem 1rem' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                        #{prog.id_programa}
+                      </span>
+                    </td>
+                    
+                    {/* Fecha */}
+                    <td style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#64748b' }}>
+                          {weekday}.
+                        </span>
+                        <span>
+                          {formatFechaLocal(prog.fecha)}
+                        </span>
+                      </div>
+                    </td>
+                    
+                    {/* Turno */}
+                    <td style={{ padding: '0.65rem 1rem' }}>
+                      <span className={getTurnoBadgeClass(prog.nombre_turno)} style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                        {prog.nombre_turno}
+                      </span>
+                    </td>
+                    
+                    {/* Cant Recetas */}
+                    <td style={{ padding: '0.65rem 1rem', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem' }}>
+                      <span>{prog.cant_recetas} recetas</span>
+                    </td>
+                    
+                    {/* Estado */}
+                    <td style={{ padding: '0.65rem 1rem' }}>
+                      {prog.estado === 'Cerrado' ? (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '6px',
+                          background: '#d4edda',
+                          color: '#155724',
+                          border: '1px solid #c3e6cb'
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#28a745' }} />
+                          Cerrado
+                        </span>
+                      ) : (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '6px',
+                          background: '#ffeeba',
+                          color: '#856404',
+                          border: '1px solid #ffeeba'
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffc107' }} />
+                          Pendiente
+                        </span>
+                      )}
+                    </td>
+                    
+                    {/* Acciones */}
+                    <td style={{ padding: '0.65rem 1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                        
+                        <Link 
+                          href={`/programas/${prog.id_programa}`} 
+                          className="btn-action"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                        >
+                          📊 Consolidado
+                        </Link>
+                        
+                        <Link 
+                          href={`/programas/dia/${prog.fecha}/valorizacion`} 
+                          className="btn-action"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
+                        >
+                          💰 Valorizado
+                        </Link>
+                        
+                        <Link 
+                          href={`/programas/${prog.id_programa}/editar`} 
+                          className="btn-action btn-action-edit"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                        >
+                          ✏️ Editar
+                        </Link>
+                        
+                        <DeleteProgramaButton id_programa={prog.id_programa} />
+                      
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '130px' }}>ID</th>
-                      <th>Turno</th>
-                      <th style={{ textAlign: 'center', width: '110px' }}>Recetas</th>
-                      <th style={{ width: '300px' }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {programasDeFecha.map(prog => {
-                      return (
-                        <tr key={prog.id_programa}>
-                          <td>
-                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                              #{prog.id_programa}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={getTurnoBadgeClass(prog.nombre_turno)}>
-                              {prog.nombre_turno}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span style={{ fontWeight: 600 }}>{prog.cant_recetas}</span>
-                            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', marginLeft: '0.2rem' }}>recetas</span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                              <Link href={`/programas/${prog.id_programa}`} className="btn-action">
-                                📊 Consolidado
-                              </Link>
-                              <Link href={`/programas/${prog.id_programa}/editar`} className="btn-action btn-action-edit">
-                                ✏️ Editar
-                              </Link>
-                              <DeleteProgramaButton id_programa={prog.id_programa} />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      
-      {hasMore && (
-        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <button 
-            onClick={handleLoadMore} 
-            className="btn-outline" 
-            style={{ width: '100%', maxWidth: '300px', padding: '0.7rem' }}
-          >
-            Cargar más días ↓
-          </button>
+      {/* ── PAGINACIÓN ESTILO ERP (RESTAURAN.PE) ── */}
+      {totalPages > 1 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '1.25rem',
+          padding: '0 0.5rem',
+          fontSize: '0.8rem',
+          color: '#64748b'
+        }}>
+          <div>
+            Mostrando {Math.min(filteredProgramas.length, (safeCurrentPage - 1) * itemsPerPage + 1)} a {Math.min(filteredProgramas.length, safeCurrentPage * itemsPerPage)} de {filteredProgramas.length} registros
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {/* Primero */}
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={safeCurrentPage === 1}
+              className="btn-pagination"
+              style={{
+                padding: '0.3rem 0.6rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                background: '#fff',
+                cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                opacity: safeCurrentPage === 1 ? 0.5 : 1
+              }}
+            >
+              Primera
+            </button>
+            
+            {/* Anterior */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={safeCurrentPage === 1}
+              className="btn-pagination"
+              style={{
+                padding: '0.3rem 0.6rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                background: '#fff',
+                cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                opacity: safeCurrentPage === 1 ? 0.5 : 1
+              }}
+            >
+              Anterior
+            </button>
+
+            {/* Números de Página */}
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const pNum = idx + 1;
+              // Mostrar solo páginas adyacentes si hay demasiadas
+              if (totalPages > 6 && Math.abs(pNum - safeCurrentPage) > 2 && pNum !== 1 && pNum !== totalPages) {
+                if (pNum === 2 || pNum === totalPages - 1) {
+                  return <span key={pNum} style={{ padding: '0.3rem 0.4rem', color: '#94a3b8' }}>...</span>;
+                }
+                return null;
+              }
+
+              return (
+                <button
+                  key={pNum}
+                  onClick={() => setCurrentPage(pNum)}
+                  className={`btn-pagination ${safeCurrentPage === pNum ? 'active' : ''}`}
+                  style={{
+                    padding: '0.3rem 0.65rem',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    background: safeCurrentPage === pNum ? '#2563eb' : '#fff',
+                    color: safeCurrentPage === pNum ? '#fff' : '#0f172a',
+                    fontWeight: safeCurrentPage === pNum ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {pNum}
+                </button>
+              );
+            })}
+
+            {/* Siguiente */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={safeCurrentPage === totalPages}
+              className="btn-pagination"
+              style={{
+                padding: '0.3rem 0.6rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                background: '#fff',
+                cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                opacity: safeCurrentPage === totalPages ? 0.5 : 1
+              }}
+            >
+              Siguiente
+            </button>
+
+            {/* Último */}
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safeCurrentPage === totalPages}
+              className="btn-pagination"
+              style={{
+                padding: '0.3rem 0.6rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                background: '#fff',
+                cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                opacity: safeCurrentPage === totalPages ? 0.5 : 1
+              }}
+            >
+              Último
+            </button>
+          </div>
         </div>
       )}
     </div>

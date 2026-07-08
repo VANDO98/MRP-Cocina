@@ -148,6 +148,13 @@ export async function cerrarProgramaConTeorico(id_programa: string) {
         WHERE id_programa = ${id_programa} AND id_insumo = ${t.id_insumo}
       `;
     }
+
+    // 3. Marcar programa como Cerrado
+    await sql`
+      UPDATE Programa_Produccion
+      SET estado = 'Cerrado'
+      WHERE id_programa = ${id_programa}
+    `;
   });
 
   revalidatePath(`/programas/${id_programa}`);
@@ -178,6 +185,13 @@ export async function cerrarDiaConTeorico(fecha: string) {
         WHERE id_programa = ${t.id_programa} AND id_insumo = ${t.id_insumo}
       `;
     }
+
+    // 3. Marcar programas como Cerrados
+    await sql`
+      UPDATE Programa_Produccion
+      SET estado = 'Cerrado'
+      WHERE id_programa = ANY(${ids})
+    `;
   });
 
   revalidatePath(`/programas`);
@@ -283,6 +297,13 @@ export async function saveProgramaEdicion(id_programa: string, recetas: { id_rec
         await sql`UPDATE Despacho_Consolidado SET cantidad_real_entregada = ${parteProporcional} WHERE id_despacho = ${d.id_despacho}`;
       }
     }
+
+    // 7. Resetear estado a Abierto al editar el programa
+    await sql`
+      UPDATE Programa_Produccion
+      SET estado = 'Abierto'
+      WHERE id_programa = ${id_programa}
+    `;
   });
 
   const programasFecha = await db`SELECT id_programa FROM Programa_Produccion WHERE fecha = ${fecha}`;

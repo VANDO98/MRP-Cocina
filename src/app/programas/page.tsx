@@ -5,34 +5,25 @@ import ExportarValorizacionBtn from '@/components/ExportarValorizacionBtn';
 
 export default async function ProgramasPage() {
   const programas = await db`
-    SELECT p.id_programa, p.fecha, t.nombre_turno, COUNT(pd.id_receta) as cant_recetas
+    SELECT p.id_programa, p.fecha, t.nombre_turno, p.estado, COUNT(pd.id_receta) as cant_recetas
     FROM Programa_Produccion p
     JOIN Turno t ON p.id_turno = t.id_turno
     LEFT JOIN Programa_Detalle pd ON p.id_programa = pd.id_programa
-    GROUP BY p.id_programa, p.fecha, t.nombre_turno, t.id_turno
+    GROUP BY p.id_programa, p.fecha, t.nombre_turno, t.id_turno, p.estado
     ORDER BY p.fecha DESC, t.id_turno ASC
   `;
 
-  // Agrupar por fecha para poder ofrecer "Imprimir día"
-  type ProgRow = {
-    id_programa: string;
-    fecha: string;
-    nombre_turno: string;
-    cant_recetas: number;
-  };
-  
-  const porFecha: Record<string, ProgRow[]> = {};
-  programas.forEach(p => {
-    const fecha = new Date(p.fecha).toISOString().split('T')[0];
-    if (!porFecha[fecha]) porFecha[fecha] = [];
-    porFecha[fecha].push({
-      id_programa: p.id_programa,
-      fecha: p.fecha,
-      nombre_turno: p.nombre_turno,
-      cant_recetas: Number(p.cant_recetas)
-    });
-  });
-  const fechasOrdenadas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a));
+  // Mapear los programas a una estructura plana limpia
+  const flatProgramas = programas.map(p => ({
+    id_programa: p.id_programa as string,
+    fecha: new Date(p.fecha).toISOString().split('T')[0],
+    nombre_turno: p.nombre_turno as string,
+    cant_recetas: Number(p.cant_recetas),
+    estado: (p.estado || 'Abierto') as string
+  }));
+
+  // Obtener cantidad de días únicos registrados
+  const diasUnicos = new Set(flatProgramas.map(p => p.fecha)).size;
 
   return (
     <div>
@@ -43,7 +34,7 @@ export default async function ProgramasPage() {
             <span className="overline">Producción Diaria</span>
             <h1>Programas de <em>Producción</em></h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.3rem' }}>
-              {programas.length} programa{programas.length !== 1 ? 's' : ''} · {fechasOrdenadas.length} día{fechasOrdenadas.length !== 1 ? 's' : ''} registrados
+              {flatProgramas.length} programa{flatProgramas.length !== 1 ? 's' : ''} · {diasUnicos} día{diasUnicos !== 1 ? 's' : ''} registrados
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -55,8 +46,8 @@ export default async function ProgramasPage() {
         </div>
       </div>
 
-      {/* ── LISTA AGRUPADA POR FECHA ── */}
-      {programas.length === 0 ? (
+      {/* ── LISTA DE PROGRAMAS (TABLA ERP) ── */}
+      {flatProgramas.length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <span className="empty-state-icon">📋</span>
@@ -67,7 +58,7 @@ export default async function ProgramasPage() {
           </div>
         </div>
       ) : (
-        <ProgramasListClient fechasOrdenadas={fechasOrdenadas} porFecha={porFecha} />
+        <ProgramasListClient programas={flatProgramas} />
       )}
     </div>
   );
