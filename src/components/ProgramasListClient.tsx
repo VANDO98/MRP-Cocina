@@ -323,14 +323,26 @@ export default function ProgramasListClient({ programas }: Props) {
                     
                     {/* Fecha */}
                     <td style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <Link 
+                        href={`/programas/dia/${prog.fecha}`}
+                        style={{ 
+                          display: 'flex', 
+                          gap: '0.35rem', 
+                          alignItems: 'center', 
+                          textDecoration: 'none', 
+                          color: 'inherit',
+                          fontWeight: 500
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                      >
                         <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#64748b' }}>
                           {weekday}.
                         </span>
-                        <span>
+                        <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
                           {formatFechaLocal(prog.fecha)}
                         </span>
-                      </div>
+                      </Link>
                     </td>
                     
                     {/* Turno */}
@@ -384,20 +396,28 @@ export default function ProgramasListClient({ programas }: Props) {
                     
                     {/* Acciones */}
                     <td style={{ padding: '0.65rem 1rem' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         
+                        <Link 
+                          href={`/programas/dia/${prog.fecha}`} 
+                          className="btn-action"
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', background: '#f8fafc', borderColor: '#cbd5e1', fontWeight: 600 }}
+                        >
+                          📅 Consolidado Día
+                        </Link>
+
                         <Link 
                           href={`/programas/${prog.id_programa}`} 
                           className="btn-action"
-                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem' }}
                         >
-                          📊 Consolidado
+                          📊 Turno
                         </Link>
                         
                         <Link 
                           href={`/programas/dia/${prog.fecha}/valorizacion`} 
                           className="btn-action"
-                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
                         >
                           💰 Valorizado
                         </Link>
@@ -405,7 +425,7 @@ export default function ProgramasListClient({ programas }: Props) {
                         <Link 
                           href={`/programas/${prog.id_programa}/editar`} 
                           className="btn-action btn-action-edit"
-                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem' }}
                         >
                           ✏️ Editar
                         </Link>
