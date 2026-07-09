@@ -498,3 +498,58 @@ export async function toggleTurnoActivo(id_turno: number, activo: boolean) {
   revalidatePath('/programas/nuevo');
 }
 
+export async function getRecetasDetalladasExcel() {
+  // 1. Obtener todas las recetas con sus ingredientes
+  const data = await db`
+    SELECT 
+      r.id_receta,
+      r.nombre_receta,
+      cr.nombre_categoria as categoria_receta,
+      rd.cantidad_unitaria,
+      i.id_insumo,
+      i.nombre_insumo,
+      ci.nombre_categoria as categoria_insumo,
+      u.simbolo,
+      i.precio_defecto
+    FROM Receta r
+    LEFT JOIN Categoria_Receta cr ON r.id_categoria_receta = cr.id_categoria_receta
+    LEFT JOIN Receta_Detalle rd ON r.id_receta = rd.id_receta
+    LEFT JOIN Insumo i ON rd.id_insumo = i.id_insumo
+    LEFT JOIN Categoria_Insumo ci ON i.id_categoria_insumo = ci.id_categoria_insumo
+    LEFT JOIN Unidad_Medida u ON i.id_unidad = u.id_unidad
+    ORDER BY r.nombre_receta ASC, ci.nombre_categoria ASC, i.nombre_insumo ASC
+  `;
+
+  // 2. Obtener precios más recientes para cada insumo
+  const historiales = await db`
+    SELECT DISTINCT ON (id_insumo) id_insumo, precio_unitario
+    FROM Precio_Insumo_Historial 
+    WHERE fecha_inicio <= CURRENT_DATE
+    ORDER BY id_insumo, fecha_inicio DESC
+  `;
+
+  const mapaPrecios: Record<number, number> = {};
+  historiales.forEach(h => {
+    mapaPrecios[h.id_insumo as number] = Number(h.precio_unitario);
+  });
+
+  return data.map(row => {
+    const idInsumo = row.id_insumo as number;
+    const precio = idInsumo ? (mapaPrecios[idInsumo] !== undefined ? mapaPrecios[idInsumo] : Number(row.precio_defecto || 0)) : 0;
+    const qty = Number(row.cantidad_unitaria || 0);
+    const costo = qty * precio;
+
+    return {
+      id_receta: row.id_receta as number,
+      nombre_receta: row.nombre_receta as string,
+      categoria_receta: row.categoria_receta as string || 'Sin categoría',
+      insumo: row.nombre_insumo as string || '-',
+      categoria_insumo: row.categoria_insumo as string || '-',
+      cantidad_unitaria: qty,
+      simbolo: row.simbolo as string || '-',
+      precio_unitario: precio,
+      costo_insumo: costo
+    };
+  });
+}
+

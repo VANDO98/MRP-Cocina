@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
+import ExportarRecetasBtn from '@/components/ExportarRecetasBtn';
 
 export default async function RecetasPage() {
   const recetas = await db`
@@ -31,9 +32,12 @@ export default async function RecetasPage() {
               {recetas.length} receta{recetas.length !== 1 ? 's' : ''} · {categorias.length} categoría{categorias.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <Link href="/recetas/nuevo" className="btn">
-            + Nueva Receta
-          </Link>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <ExportarRecetasBtn />
+            <Link href="/recetas/nuevo" className="btn">
+              + Nueva Receta
+            </Link>
+          </div>
         </div>
       </div>
 
