@@ -2,8 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { procesarExcelRawRecetas, validarImportacionRecetas, importarRecetasBD, ParsedRecipeRow, ValidationResult } from '@/app/actions/import-recetas';
+import { validarRecetasExistentes, importarRecetasBD, ParsedRecipeRow } from '@/app/actions/import-recetas';
 import * as XLSX from 'xlsx-js-style';
+
+type ValidationResult = {
+  nombre: string;
+  codigo: string;
+  categoria: string;
+  ingredientesCount: number;
+  existe: boolean;
+};
 
 export default function ImportarRecetasPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -47,18 +55,117 @@ export default function ImportarRecetasPage() {
     }
   };
 
+  const parseFileOnClient = (htmlText: string): ParsedRecipeRow[] => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+    const h3s = doc.querySelectorAll('h3');
+    const result: ParsedRecipeRow[] = [];
+
+    h3s.forEach((el) => {
+      const text = el.textContent?.trim() || '';
+      if (text.startsWith('Receta:')) {
+        const recipeName = text.replace('Receta:', '').trim().replace(/\u00a0/g, ' ');
+        const trContainingH3 = el.closest('tr');
+        if (!trContainingH3) return;
+        
+        const trPrev = trContainingH3.previousElementSibling;
+        let recipeMeta = {
+          codigo: '',
+          nombre: recipeName,
+          raciones: 1,
+          unidad: 'UNIDAD',
+          categoria: 'Otros',
+          costoUnitario: 0,
+          costoTotal: 0
+        };
+
+        if (trPrev) {
+          const tds = trPrev.querySelectorAll('td');
+          if (tds.length >= 8) {
+            recipeMeta.codigo = tds[0].textContent?.trim().replace(/\u00a0/g, ' ') || '';
+            if (recipeMeta.codigo === '-') recipeMeta.codigo = '';
+            recipeMeta.raciones = Number(tds[2].textContent?.trim().replace(/,/g, '')) || 1;
+            recipeMeta.unidad = tds[3].textContent?.trim() || 'UNIDAD';
+            recipeMeta.categoria = tds[4].textContent?.trim() || 'Otros';
+            
+            recipeMeta.costoUnitario = Number(tds[tds.length - 3].textContent?.trim()) || 0;
+            recipeMeta.costoTotal = Number(tds[tds.length - 2].textContent?.trim()) || 0;
+          }
+        }
+
+        // Buscar la tabla de ingredientes (generalmente la primera tabla dentro del trContainingH3)
+        const table = trContainingH3.querySelector('table');
+        if (table) {
+          const rows = table.querySelectorAll('tbody tr');
+          rows.forEach((tr) => {
+            const tdsIng = tr.querySelectorAll('td');
+            if (tdsIng.length >= 3) {
+              const qty = Number(tdsIng[0].textContent?.trim()) || 0;
+              const unit = tdsIng[1].textContent?.trim() || '';
+              const insumoRaw = tdsIng[2].textContent?.trim() || '';
+              const insumoClean = insumoRaw.split('>').pop()?.trim().replace(/\u00a0/g, ' ') || '';
+              
+              if (insumoClean) {
+                result.push({
+                  recipe_codigo: recipeMeta.codigo,
+                  recipe_nombre: recipeMeta.nombre,
+                  recipe_categoria: recipeMeta.categoria,
+                  recipe_raciones: recipeMeta.raciones,
+                  recipe_unidad: recipeMeta.unidad,
+                  recipe_costo: recipeMeta.costoTotal,
+                  insumo_nombre: insumoClean,
+                  insumo_cantidad: qty,
+                  insumo_unidad: unit
+                });
+              }
+            }
+          });
+        }
+      }
+    });
+
+    return result;
+  };
+
   const handleProcessFile = async () => {
     if (!file) return;
     setIsProcessing(true);
     setImportStatus(null);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // 1. Leer el archivo HTML de recetas en bruto en el cliente
+      const textContent = await file.text();
       
-      const rows = await procesarExcelRawRecetas(formData);
+      // 2. Parsearlo localmente en el navegador en milisegundos sin llamadas de red pesadas
+      const rows = parseFileOnClient(textContent);
       setParsedData(rows);
 
-      const val = await validarImportacionRecetas(rows);
+      // 3. Extraer nombres únicos para validar en el servidor (payload liviano de KB)
+      const nombresUnicos = Array.from(new Set(rows.map(r => r.recipe_nombre)));
+      const existentesList = await validarRecetasExistentes(nombresUnicos);
+      const existentesSet = new Set(existentesList.map(n => n.toUpperCase().trim()));
+
+      // 4. Mapear validaciones
+      const mapaRecetas: Record<string, { codigo: string; categoria: string; count: number }> = {};
+      rows.forEach(r => {
+        const key = r.recipe_nombre.trim().toUpperCase();
+        if (!mapaRecetas[key]) {
+          mapaRecetas[key] = {
+            codigo: r.recipe_codigo,
+            categoria: r.recipe_categoria,
+            count: 0
+          };
+        }
+        mapaRecetas[key].count++;
+      });
+
+      const val = Object.entries(mapaRecetas).map(([nombre, meta]) => ({
+        nombre,
+        codigo: meta.codigo,
+        categoria: meta.categoria,
+        ingredientesCount: meta.count,
+        existe: existentesSet.has(nombre)
+      })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+
       setValidationResults(val);
 
       // Selección por defecto: marcar las nuevas y desmarcar las existentes
@@ -68,7 +175,6 @@ export default function ImportarRecetasPage() {
       });
       setSelectedRecipes(selection);
 
-      // Si no hay nuevas, activar pestaña de existentes
       const tieneNuevas = val.some(r => !r.existe);
       setActiveTab(tieneNuevas ? 'nuevas' : 'existentes');
 
@@ -104,7 +210,6 @@ export default function ImportarRecetasPage() {
   const handleExportPolishedExcel = () => {
     if (parsedData.length === 0) return;
     
-    // Mapear los datos limpios al formato de descarga
     const excelRows = parsedData.map(r => ({
       "CÓDIGO RECETA": r.recipe_codigo,
       "RECETA": r.recipe_nombre,
@@ -170,8 +275,26 @@ export default function ImportarRecetasPage() {
       const res = await importarRecetasBD(parsedData, listToImport);
       setImportStatus(res.message);
       
-      // Volver a procesar para actualizar la vista de existentes/nuevas
-      await handleProcessFile();
+      // Actualizar listado localmente
+      const nombresUnicos = Array.from(new Set(parsedData.map(r => r.recipe_nombre)));
+      const existentesList = await validarRecetasExistentes(nombresUnicos);
+      const existentesSet = new Set(existentesList.map(n => n.toUpperCase().trim()));
+
+      const updatedVal = validationResults.map(r => ({
+        ...r,
+        existe: existentesSet.has(r.nombre)
+      }));
+      setValidationResults(updatedVal);
+
+      // Deseleccionar las que se acaban de importar
+      const selection = { ...selectedRecipes };
+      updatedVal.forEach(r => {
+        if (r.existe) {
+          selection[r.nombre] = false;
+        }
+      });
+      setSelectedRecipes(selection);
+      
     } catch (err: any) {
       console.error(err);
       setImportStatus("Error en la importación: " + (err.message || err));
@@ -196,7 +319,7 @@ export default function ImportarRecetasPage() {
         <span className="overline">Herramienta de Limpieza</span>
         <h1 style={{ color: 'var(--primary-color)', margin: '0.2rem 0' }}>Pulidor de Recetas ERP</h1>
         <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
-          Sube el archivo <code>recetas (7).xls</code> (HTML) exportado de Restauran.pe y limpia su estructura al instante.
+          Sube el archivo <code>recetas (7).xls</code> (HTML) exportado de Restauran.pe y limpia su estructura al instante de forma local y ultrarrápida.
         </p>
       </div>
 
@@ -238,7 +361,7 @@ export default function ImportarRecetasPage() {
             className="btn"
             style={{ padding: '0.6rem 2.5rem', fontSize: '0.9rem' }}
           >
-            {isProcessing ? 'Procesando archivo... Espere por favor' : 'Procesar y Validar Recetas'}
+            {isProcessing ? 'Procesando archivo localmente... Espere por favor' : 'Procesar y Validar Recetas'}
           </button>
         </div>
       )}
