@@ -33,6 +33,9 @@ export default async function RecetasPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <Link href="/recetas/importar" className="btn btn-outline" style={{ borderColor: 'var(--primary-color)' }}>
+              🧹 Pulir / Importar ERP
+            </Link>
             <ExportarRecetasBtn />
             <Link href="/recetas/nuevo" className="btn">
               + Nueva Receta
